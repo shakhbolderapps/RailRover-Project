@@ -1,0 +1,703 @@
+           Bolder Apps X RailRover - Scope of Work
+
+
+
+                                                     SCOPE OF WORK
+                                                               RailRover
+                                        Prepared by: Bolder Apps | For: Greg Hillabrand | June 2026
+
+           1. Problem Statement
+           Drivers, particularly those running commercial and fleet routes, regularly lose time stuck at railroad crossings blocked
+           by stopped or slow-moving trains. They have no way to know a crossing is blocked until they are already waiting at it,
+           because existing navigation apps show where crossings are but never whether one is blocked right now.
+
+
+
+           2. Solution Statement
+           RailRover is a mobile app that shows railroad crossings on a live map, lets drivers report a crossing as blocked or
+           clear, checks fresh blocked reports against the driver’s active route in real time, and reroutes the driver around a
+           blocked crossing before they reach it. When entering a destination, drivers can compare routes by how many
+           crossings each one crosses. The MVP launches as a local pilot around Toledo, Ohio that proves the value of
+           real-time, crowd-sourced crossing status.
+
+
+
+           3. Deliverables
+              •​ iOS and Android Mobile Application
+              •​ Web Admin Panel
+
+
+
+           4. User Types
+            User Type                            Description
+            Driver                               The end user. Drives with the app during a trip, sees nearby crossings on the
+                                                 map, reports a crossing as blocked or clear, and receives a warning with an
+                                                 alternate route when a fresh blocked report sits ahead on the active route.
+                                                 Guest access is allowed so a driver can start with minimal setup.
+            Administrator                        Internal platform staff who maintain the crossing inventory, review submitted
+                                                 reports for accuracy, manage driver accounts, and track pilot performance.
+                                                 Access is through the Web Admin Panel only.
+
+
+
+           5. Module Summary
+            Module                               Description
+            Foundation                           Guest access and lightweight accounts, the live-location layer that powers route
+                                                 awareness, the notification baseline, and user settings shared across the app.
+            Crossing Map                         The Bolder-compiled crossing inventory, the live home map with red, yellow,
+                                                 and green crossing markers, and the crossing detail view.
+            Crowd-Sourced Reporting              The fast blocked and clear report flows that let any driver update a crossing’s
+                                                 status in seconds.
+            Route Conflict and Alerts            Destination and route options ranked by crossing count, the real-time logic that
+                                                 decides whether a fresh blocked crossing sits ahead on the active route, the
+                                                 alert, the automatic reroute, and the active alerts list.
+            Web Admin Panel                      Back-office tools for administrator sign-in, crossing inventory management,
+                                                 report review, broadcast notifications, and pilot analytics.
+
+
+
+
+                                                                    Page 1
+
+
+
+Document Ref: QNZJP-QGWUO-ST8BC-3XA3G                                                                                                 Page 5 of 25
+           Bolder Apps X RailRover - Scope of Work
+
+
+           6. Module Breakdown
+           Module 1: Foundation
+            Feature                         Guest Access and Account
+            Description                     A driver can start using the app immediately as a guest to keep first-run friction low,
+                                            and can create a lightweight account to retain their settings and report history.
+            User Flow                       1. Driver opens the app for the first time.
+                                            2. Driver chooses to continue as a guest or create an account.
+                                            3. A guest is taken straight to the map; a registering driver provides an email and
+                                            password.
+                                            4. System creates the account and an authenticated session, or a guest session tied
+                                            to the device.
+                                            5. On return visits, the driver resumes their session or signs in.
+            Edge Cases                      A guest later creates an account -> System carries the device settings and recent
+                                            reports into the new account.
+                                            An incorrect password is entered -> System responds with "Email or password is
+                                            incorrect."
+                                            A driver forgets their password -> System sends a reset link to the registered email.
+            Acceptance Criteria             1. A driver can reach the map and submit reports as a guest without creating an
+                                            account.
+                                            2. A driver can create an account with email and password and sign in on return
+                                            visits.
+                                            3. Passwords are stored using a one-way salted hash and never in plain text.
+                                            4. Each report is tied to a device identifier so guest and account reports can be
+                                            attributed.
+
+
+            Feature                         Location Permissions and Live Location
+            Description                     The app requests location permission and tracks the driver’s live position during an
+                                            active trip so it can place the driver on the map, find the nearest crossing for a
+                                            report, and check crossings ahead on the route. The location layer is built so
+                                            always-on background tracking can be enabled in a later phase without rework.
+            User Flow                       1. On first use, the app explains why it needs location and requests permission.
+                                            2. Driver grants location access for use while the app is active.
+                                            3. System tracks the driver position during an active session and centers the map on
+                                            it.
+                                            4. System uses live position to auto-select the nearest crossing for reports and to
+                                            evaluate crossings ahead on the route.
+            Edge Cases                      A driver denies location permission -> System explains that route alerts and
+                                            nearest-crossing reporting need location, and offers a path to enable it in settings.
+                                            Location signal is temporarily lost -> System holds the last known position and
+                                            resumes when the signal returns.
+            Acceptance Criteria             1. The app requests location permission with a clear purpose string before any
+                                            tracking begins.
+                                            2. Live position updates while the app is active and drives map centering and
+                                            nearest-crossing selection.
+                                            3. The location layer is structured so always-on background tracking can be enabled
+                                            in a later phase.
+                                            4. Location data handling follows the privacy disclosures presented at permission
+                                            time.
+
+
+            Feature                         Notifications
+
+
+
+                                                                     Page 2
+
+
+
+Document Ref: QNZJP-QGWUO-ST8BC-3XA3G                                                                                                 Page 6 of 25
+           Bolder Apps X RailRover - Scope of Work
+
+
+            Description                     The app delivers push notifications and an in-app inbox for relevant activity,
+                                            including route alerts surfaced during an active trip and broadcast messages from
+                                            platform staff. Alerting while the app is closed is part of a later phase.
+            User Flow                       1. System requests notification permission after the driver reaches the map.
+                                            2. System sends a push notification and an in-app entry on a relevant event.
+                                            3. Driver opens the in-app inbox to review read and unread items.
+                                            4. Tapping an item opens the related crossing or alert.
+            Edge Cases                      Push permission is denied -> Alerts and messages remain available in the in-app
+                                            inbox while the app is active.
+                                            Several notifications arrive together -> System groups them in the inbox.
+            Acceptance Criteria             1. Push notifications are delivered to opted-in devices on iOS and Android.
+                                            2. An in-app inbox lists notifications with read and unread states.
+                                            3. Each notification opens its related crossing or alert.
+                                            4. Notification permissions can be managed from settings.
+
+
+            Feature                         Settings
+            Description                     A short settings screen where the driver manages notification preferences, the
+                                            auto-reroute preference, and their account, including signing in or out and deleting
+                                            the account.
+            User Flow                       1. Driver opens settings.
+                                            2. Driver adjusts notification preferences and the auto-reroute preference.
+                                            3. Driver signs in, signs out, or deletes their account.
+                                            4. System saves the preferences and applies them immediately.
+            Acceptance Criteria             1. A driver can enable or disable notifications.
+                                            2. Auto-reroute is on by default, rerouting around a detected blocked crossing after a
+                                            short preview; a driver can turn it off to be prompted instead.
+                                            3. A driver can sign in, sign out, and delete their account.
+
+
+
+           Module 2: Crossing Map
+            Feature                         Crossing Inventory
+            Description                     Known railroad crossings for the pilot area are compiled by Bolder Apps from public
+                                            crossing data, each with its location, road, and city, forming the static set of
+                                            crossings the app tracks. The pilot covers an approximately 200-mile radius around
+                                            Toledo, Ohio, and you do not need to supply a crossing list.
+            User Flow                       1. Bolder Apps compiles the pilot crossing set from public data before launch.
+                                            2. System stores each crossing with its identifier, name, location, road, and city.
+                                            3. System serves crossings to the map and to the report and route logic.
+                                            4. Platform staff correct or extend the inventory through the Web Admin Panel.
+            Edge Cases                      A compiled crossing has an inaccurate location -> Platform staff correct its
+                                            coordinates in the Web Admin Panel so reports and route checks stay accurate.
+            Acceptance Criteria             1. The pilot crossing set is compiled from public data with identifier, name, location,
+                                            road, and city for each crossing.
+                                            2. Crossings are scoped to the pilot coverage area, an approximately 200-mile
+                                            radius around Toledo.
+                                            3. The inventory is the single source the map, reporting, and route logic read from.
+
+
+            Feature                         Home Map and Crossing Markers
+
+
+
+
+                                                                     Page 3
+
+
+
+Document Ref: QNZJP-QGWUO-ST8BC-3XA3G                                                                                                 Page 7 of 25
+           Bolder Apps X RailRover - Scope of Work
+
+
+            Description                     The home screen shows a live map centered on the driver with color-coded markers
+                                            for nearby crossings, a destination search at the top, report and route actions at the
+                                            bottom, and a short summary line such as the number of blocked crossings on the
+                                            active route. A crossing shows red for a fresh blocked report, yellow once a blocked
+                                            report has aged past the freshness window without a clear report, and green once a
+                                            clear report is received.
+            User Flow                       1. Driver opens the home map.
+                                            2. System centers the map on the driver live location.
+                                            3. System displays nearby crossings as red, yellow, or green markers by status.
+                                            4. Driver taps a marker to open its detail, or uses the bottom actions to report or
+                                            enter a destination.
+                                            5. System shows a summary line such as "1 blocked crossing on your route" when a
+                                            route is active.
+            Edge Cases                      A crossing has a fresh blocked report -> System shows it red.
+                                            A blocked report ages past the freshness window with no clear report -> System
+                                            shows the crossing yellow, meaning blocked but unconfirmed.
+                                            A clear report is submitted -> System shows the crossing green; status returns to
+                                            green only on a clear report, not on a timer.
+            Acceptance Criteria             1. The map centers on the driver live location.
+                                            2. Crossings display as red, yellow, or green markers: red for a fresh blocked report,
+                                            yellow for a blocked report aged past the freshness window, green once a clear
+                                            report is received.
+                                            3. Destination search is available at the top and report and route actions at the
+                                            bottom.
+                                            4. A summary line reports the count of blocked crossings on the active route.
+
+
+            Feature                         Crossing Detail
+            Description                     The crossing detail view shows a crossing’s current status, the time of the last
+                                            report, how many reports it has received, and whether it currently affects the driver’s
+                                            active route.
+            User Flow                       1. Driver taps a crossing marker or list item.
+                                            2. System opens the crossing detail.
+                                            3. System shows status, last report time, and report count.
+                                            4. System indicates whether the crossing affects the active route.
+                                            5. Driver can submit a blocked or clear report from the detail view.
+            Edge Cases                      A crossing has no reports yet -> System shows it as unconfirmed with no recent
+                                            report time.
+            Acceptance Criteria             1. The detail view shows current status, last report time, and report count.
+                                            2. The view indicates whether the crossing is on or near the active route.
+                                            3. A driver can report blocked or clear directly from the detail view.
+
+
+
+           Module 3: Crowd-Sourced Reporting
+            Feature                         Report Blocked
+            Description                     A fast flow that lets a driver mark a crossing as blocked in a couple of taps, in under
+                                            five seconds, auto-selecting the nearest crossing. Reporting is limited to crossings
+                                            within about a mile so a driver reports a crossing they can actually see. No note
+                                            field, to keep it quick while driving.
+            User Flow                       1. Driver taps the blocked report action.
+                                            2. System auto-selects the nearest crossing within about a mile of the driver.
+                                            3. Driver confirms the crossing.
+
+
+
+                                                                     Page 4
+
+
+
+Document Ref: QNZJP-QGWUO-ST8BC-3XA3G                                                                                                 Page 8 of 25
+           Bolder Apps X RailRover - Scope of Work
+
+
+                                            4. System saves the report with the crossing, status, timestamp, and device
+                                            identifier.
+                                            5. System updates the crossing to red across the app.
+            Edge Cases                      The driver is not within about a mile of a known crossing -> System does not allow a
+                                            report, since the driver is too far to observe the crossing.
+                                            The same crossing is reported blocked repeatedly -> System records the latest
+                                            report and refreshes the freshness timer.
+            Acceptance Criteria             1. A blocked report can be submitted in a couple of taps, in under five seconds, with
+                                            the nearest crossing auto-selected.
+                                            2. Reporting is limited to crossings within about a mile of the driver, a configurable
+                                            distance.
+                                            3. Each report saves the crossing, status, timestamp, and device identifier.
+                                            4. A new blocked report updates the crossing to red and resets its freshness
+                                            window.
+                                            5. Report submission is rate-limited per device to deter spam.
+
+
+            Feature                         Report Clear
+            Description                     The same fast flow used to mark a previously blocked crossing as clear, turning it
+                                            green. A clear report is the only thing that returns a crossing to green, since the app
+                                            does not guess a crossing is clear on a timer.
+            User Flow                       1. Driver taps the clear report action.
+                                            2. System auto-selects the nearest crossing within about a mile.
+                                            3. Driver confirms the crossing.
+                                            4. System saves the clear report and updates the crossing to green.
+            Edge Cases                      A crossing is reported clear while another driver reports it blocked -> System keeps
+                                            the most recent report and reflects it in the crossing status.
+            Acceptance Criteria             1. A clear report uses the same couple-of-taps flow with the nearest crossing
+                                            auto-selected.
+                                            2. A clear report turns the crossing green and records the time; a crossing returns to
+                                            green only on a clear report.
+                                            3. Reporting is limited to crossings within about a mile of the driver.
+                                            4. Clear and blocked reports on the same crossing resolve by most recent report.
+
+
+
+           Module 4: Route Conflict and Alerts
+            Feature                         Destination Search and Route Options
+            Description                     A driver enters a destination and the app offers route options drawn on the map.
+                                            Alongside travel time, each option shows how many crossings it passes and how
+                                            many are currently blocked, so the driver can choose a route that avoids crossings.
+                                            The driver previews the options before selecting, and the chosen route becomes the
+                                            active route the alert logic checks against.
+            User Flow                       1. Driver enters a destination in the search field.
+                                            2. System geocodes the destination and requests route options.
+                                            3. System draws the options on the map and labels each with travel time, total
+                                            crossings, and currently blocked crossings, with color-coded crossing markers.
+                                            4. Driver previews the options and selects one.
+                                            5. System sets the chosen route as active for crossing checks.
+            Edge Cases                      A destination cannot be found -> System asks the driver to refine the search.
+                                            No route is available -> System tells the driver a route could not be generated.
+                                            Two routes have a similar time but different crossing counts -> System surfaces the
+                                            crossing counts so the driver can trade a little time for fewer crossings.
+
+
+
+                                                                     Page 5
+
+
+
+Document Ref: QNZJP-QGWUO-ST8BC-3XA3G                                                                                                 Page 9 of 25
+           Bolder Apps X RailRover - Scope of Work
+
+
+            Acceptance Criteria             1. A driver can enter a destination and see route options drawn on the map.
+                                            2. Each route option shows travel time, the number of crossings on it, and the
+                                            number currently blocked.
+                                            3. A driver can preview the options before selecting one, and the selected route
+                                            becomes active for the route conflict logic.
+                                            4. Route requests handle a not-found destination and a no-route result gracefully.
+
+
+            Feature                         Route Conflict Detection
+            Description                     When a route is active, the app continuously determines whether any crossing with a
+                                            fresh blocked report sits on the route ahead of the driver, so the driver is warned and
+                                            rerouted proactively rather than at the last moment. A crossing counts as on the
+                                            route when it lies within a configurable corridor of the route line, starting at 200 feet.
+                                            That corridor width decides whether a crossing is on the route; it is not how far
+                                            ahead the driver is warned.
+            User Flow                       1. System takes the active route line and the driver position.
+                                            2. System loads crossings within the route bounding box plus the corridor.
+                                            3. System keeps crossings whose distance to the route line is within the corridor,
+                                            starting at 200 feet.
+                                            4. System removes crossings already behind the driver and orders the rest by
+                                            distance ahead.
+                                            5. System checks the remaining crossings for blocked reports still inside the
+                                            freshness window, starting at 15 minutes.
+                                            6. System flags any fresh blocked crossing ahead on the route, however far ahead,
+                                            and computes an alternate route in the background so a reroute is ready.
+            Edge Cases                      A blocked report ages past the freshness window -> System stops treating the
+                                            crossing as an active red conflict and shows it yellow.
+                                            A crossing sits outside the route corridor -> System excludes it so off-route crossings
+                                            do not trigger alerts.
+                                            A new blocked report is submitted while a trip is already active -> System updates
+                                            the active route check in real time, not only from the data present when the trip
+                                            started.
+            Acceptance Criteria             1. The 200-foot value is the configurable route corridor width that decides whether a
+                                            crossing is on the route.
+                                            2. A fresh blocked crossing anywhere ahead on the active route is flagged, not only
+                                            when the driver is near it.
+                                            3. Crossings behind the driver are excluded and the rest are ordered by distance
+                                            ahead.
+                                            4. Only blocked reports inside the configurable freshness window, starting at 15
+                                            minutes, count as active.
+                                            5. New reports submitted during an active trip update the route check in real time.
+
+
+            Feature                         Blocked Crossing Alert
+            Description                     When a fresh blocked crossing is found ahead on the route, the app warns the driver
+                                            with the crossing name or road, the time of the last report, and an estimated time to
+                                            the crossing when available. With auto-reroute on, the default, the app begins
+                                            rerouting around the crossing after a short preview countdown the driver can cancel
+                                            to stay on course; with auto-reroute off, the alert offers reroute, keep current route,
+                                            and view crossing.
+            User Flow                       1. System detects a fresh blocked crossing ahead on the active route.
+                                            2. System presents the alert with the crossing name or road and the last report time.
+                                            3. System shows an estimated time to the crossing when it can be calculated.
+                                            4. With auto-reroute on, a short preview countdown begins and the app reroutes
+                                            unless the driver cancels; with it off, the driver chooses reroute, keep current route,
+                                            or view crossing.
+
+
+                                                                      Page 6
+
+
+
+Document Ref: QNZJP-QGWUO-ST8BC-3XA3G                                                                                                    Page 10 of 25
+           Bolder Apps X RailRover - Scope of Work
+
+
+            Edge Cases                      The crossing is reported clear before the driver reaches it -> System updates or
+                                            dismisses the alert.
+                                            Several blocked crossings sit ahead -> System surfaces the nearest one first and
+                                            lists the rest in active alerts.
+            Acceptance Criteria             1. An alert fires when a fresh blocked report sits on the route ahead of the driver.
+                                            2. The alert shows the crossing name or road and the last report time.
+                                            3. With auto-reroute on, the app reroutes after a short preview countdown the driver
+                                            can cancel; with it off, the alert offers reroute, keep current route, and view crossing.
+                                            4. The alert clears when the crossing is reported clear or the driver passes it.
+
+
+            Feature                         Reroute
+            Description                     When a blocked crossing is detected ahead, the app generates an alternate route
+                                            that avoids it, computed in the background so the alternate is ready the moment the
+                                            driver is alerted. Because avoiding a single point is not a built-in routing capability,
+                                            the app constructs an avoidance area or alternate waypoints and requests a new
+                                            route. This is a route-avoidance heuristic on top of the routing service, not
+                                            turn-by-turn voice navigation. With auto-reroute on, the alternate is applied
+                                            automatically after a short preview the driver can cancel.
+            User Flow                       1. System computes an alternate route around the blocked crossing in the
+                                            background.
+                                            2. System builds the alternate by constructing an avoidance area or alternate
+                                            waypoints and re-requesting the route.
+                                            3. With auto-reroute on, the app applies the alternate after a short preview
+                                            countdown; with it off, the driver chooses to accept it.
+                                            4. System shows the alternate route and the reason it may be better.
+            Edge Cases                      No reasonable alternate route exists -> System tells the driver no better route was
+                                            found and keeps the current route.
+                                            The alternate route passes another blocked crossing -> System evaluates the
+                                            alternate against the same conflict logic before applying it.
+            Acceptance Criteria             1. A reroute produces an alternate route that avoids the blocked crossing, computed
+                                            in the background.
+                                            2. With auto-reroute on, the alternate applies automatically after a short preview
+                                            countdown the driver can cancel; with it off, the driver accepts it.
+                                            3. The alternate route is presented with the reason it may be better, and the MVP
+                                            avoids the single alerted crossing, not multiple crossings at once.
+                                            4. The system handles the case where no better alternate exists.
+
+
+            Feature                         Active Alerts
+            Description                     A list of the blocked crossings currently relevant to the driver, with crossings on the
+                                            active route shown first, so the driver can review and act on them in one place.
+            User Flow                       1. Driver opens the active alerts list.
+                                            2. System lists fresh blocked crossings relevant to the driver.
+                                            3. System orders on-route crossings first.
+                                            4. Driver taps a crossing to view its detail or to reroute.
+            Edge Cases                      No crossings are currently relevant -> System shows an empty state.
+            Acceptance Criteria             1. The list shows fresh blocked crossings relevant to the driver.
+                                            2. Crossings on the active route are shown first.
+                                            3. Tapping a crossing opens its detail.
+
+
+
+           Module 5: Web Admin Panel
+
+
+                                                                      Page 7
+
+
+
+Document Ref: QNZJP-QGWUO-ST8BC-3XA3G                                                                                                   Page 11 of 25
+           Bolder Apps X RailRover - Scope of Work
+
+
+            Feature                         Administrator Authentication
+            Description                     Internal platform staff sign in to the Web Admin Panel through a separate
+                                            authentication flow from drivers, with secure password reset.
+            User Flow                       1. Administrator opens the Web Admin Panel.
+                                            2. Administrator enters their credentials.
+                                            3. System validates the credentials and opens the dashboard.
+                                            4. Administrator can reset their password securely if needed.
+            Edge Cases                      Repeated failed administrator sign-in attempts -> System rate-limits and temporarily
+                                            locks the account.
+            Acceptance Criteria             1. Administrator authentication is separate from the driver login.
+                                            2. Only accounts with the administrator role can access the panel.
+                                            3. Secure password reset is available for administrator accounts.
+
+
+            Feature                         Crossing Inventory Management
+            Description                     Internal platform staff add, edit, and remove crossings and correct crossing
+                                            coordinates so the map, reports, and route checks stay accurate as the pilot area is
+                                            refined.
+            User Flow                       1. Administrator opens crossing management.
+                                            2. Administrator searches for a crossing or adds a new one.
+                                            3. Administrator edits a crossing location, road, or city, or removes it.
+                                            4. System applies the change across the app.
+            Edge Cases                      An administrator corrects a crossing coordinates -> System updates the marker
+                                            position and the route checks that depend on it.
+            Acceptance Criteria             1. Administrators can add, edit, and remove crossings.
+                                            2. Coordinate corrections update the map and the route conflict logic.
+                                            3. Inventory changes take effect across the app.
+
+
+            Feature                         Report Review and User Management
+            Description                     Internal platform staff review submitted blocked and clear reports, remove inaccurate
+                                            or abusive reports, and manage driver accounts, including suspending a driver who
+                                            submits false reports.
+            User Flow                       1. Administrator opens the report review queue.
+                                            2. System lists recent reports with crossing, status, time, and reporter reference.
+                                            3. Administrator removes an inaccurate report or flags a reporter.
+                                            4. Administrator searches driver accounts and suspends an abusive reporter where
+                                            needed.
+            Edge Cases                      A driver submits repeated false reports -> System lets staff suspend the account and
+                                            discount its reports.
+            Acceptance Criteria             1. The queue lists recent reports with crossing, status, timestamp, and reporter
+                                            reference.
+                                            2. An administrator can remove an inaccurate report and its effect on crossing state.
+                                            3. An administrator can search, suspend, or reinstate driver accounts.
+
+
+            Feature                         System-Wide Notifications
+            Description                     Internal platform staff send notifications to all pilot users or a segment for
+                                            announcements, such as pilot instructions, coverage changes, and maintenance
+                                            notices.
+            User Flow                       1. Administrator composes a notification.
+
+
+
+                                                                      Page 8
+
+
+
+Document Ref: QNZJP-QGWUO-ST8BC-3XA3G                                                                                               Page 12 of 25
+           Bolder Apps X RailRover - Scope of Work
+
+
+                                            2. Administrator selects all pilot users or a segment.
+                                            3. Administrator sends the notification.
+                                            4. System delivers it through push and the in-app inbox.
+            Acceptance Criteria             1. An administrator can send a notification to all pilot users or a selected segment.
+                                            2. Notifications are delivered through push and the in-app inbox.
+                                            3. Sent notifications are recorded with their audience and time.
+
+
+            Feature                         Pilot Analytics Dashboard
+            Description                     A dashboard showing pilot performance for proof: active and total reports, alert
+                                            counts, reroutes, and the most affected crossings, over a selected time window.
+            User Flow                       1. Administrator opens the analytics dashboard.
+                                            2. System shows active reports, total reports, alert counts, and reroutes.
+                                            3. System lists the most affected crossings.
+                                            4. Administrator changes the time window and the dashboard updates.
+            Acceptance Criteria             1. The dashboard shows active reports, total reports, alert counts, and reroutes.
+                                            2. The dashboard lists the crossings with the most blocked reports.
+                                            3. Metrics update as the selected time window changes.
+
+
+
+
+           7. Technical Specifications
+            Category                             Details
+            Authentication                       Guest access plus optional email and password accounts for drivers, with
+                                                 secure password reset, account deletion, and server-managed sessions.
+                                                 Separate authentication for the Web Admin Panel.
+            Location                             Foreground location while the app is active, used for map centering,
+                                                 nearest-crossing reporting, and route checks. The full background-location
+                                                 permission architecture and privacy labels are built in the MVP so always-on
+                                                 background detection can be enabled in a later phase without rework. Location
+                                                 use is disclosed with a clear purpose string at permission time.
+            Mapping and Routing                  Map display, destination geocoding, route options with per-route crossing
+                                                 counts, route polylines, and route distance calculations through the Google
+                                                 Maps SDK and Directions API. Rerouting around a blocked crossing is built by
+                                                 constructing an avoidance area or alternate waypoints, since avoiding a single
+                                                 point is not a built-in routing capability.
+            Crossing Data                        A static crossing inventory compiled by Bolder Apps from public Federal
+                                                 Railroad Administration and related public crossing data, scoped to an
+                                                 approximately 200-mile radius around Toledo, Ohio, with each crossing carrying
+                                                 its identifier, name, latitude, longitude, road, and city.
+            Crossing Status                      Each crossing carries a three-state status: red for a fresh blocked report, yellow
+                                                 once a blocked report ages past the 15-minute freshness window without a
+                                                 clear report, and green only once a clear report is received.
+            Route Conflict Logic                 Bounding-box prefilter, point-to-route-line distance within a configurable corridor
+                                                 that decides whether a crossing is on the route (starting at 200 feet), an
+                                                 ahead-of-driver test, and a configurable freshness window on blocked reports
+                                                 (starting at 15 minutes). A fresh blocked crossing anywhere ahead on the
+                                                 active route is flagged, alternate routes are computed in the background, and
+                                                 the route check updates in real time as new reports arrive during a trip.
+            Data Records                         Crossings (crossing identifier, name, latitude, longitude, road, city) and Reports
+                                                 (report identifier, crossing identifier, status, timestamp, device identifier).
+                                                 Optional route and alert logs support pilot analytics.
+            Notifications                        Push notifications on iOS and Android plus an in-app inbox, delivered
+                                                 server-side to opted-in devices.
+
+
+                                                                     Page 9
+
+
+
+Document Ref: QNZJP-QGWUO-ST8BC-3XA3G                                                                                                  Page 13 of 25
+           Bolder Apps X RailRover - Scope of Work
+
+
+            Analytics                            Pilot metrics for reports, alerts, reroutes, and most-affected crossings, surfaced
+                                                 in the Web Admin Panel.
+            Security                             TLS in transit, AES-256 at rest, OWASP Top 10 compliance, per-device rate
+                                                 limiting on report submission, and report submission restricted to within about a
+                                                 mile of a crossing.
+            Privacy and App Store                Location-permission architecture, purpose strings, and privacy labels built to
+            Compliance                           the App Store Review Guidelines and Google Play requirements for location
+                                                 use.
+            iOS                                  Latest stable iOS at time of App Store publishing.
+            Android                              Latest stable Android API at time of Google Play publishing.
+            Browser                              Web Admin Panel supports the latest stable versions of major modern
+                                                 browsers (Chrome, Safari, Firefox, Edge).
+
+
+
+           8. Assumptions and Dependencies
+           Assumptions
+              •​   You provide any available branding assets before design begins.
+              •​   Bolder Apps will ensure the application is built in compliance with App Store Review Guidelines.
+              •​   Third-party API credentials are provided by you where applicable.
+              •​   Any additions outside of this agreed-upon scope will be addressed through a separate addendum.
+              •​   RailRover is a working name and is not yet confirmed; the final product name is selected during discovery,
+                   before the design phase, since it drives the logo and store listing.
+              •​   The MVP launches as a local pilot covering an approximately 200-mile radius around Toledo, Ohio, with the
+                   crossing inventory compiled by Bolder Apps from public data. Nationwide crossing coverage is a later phase.
+              •​   Crossing status in the MVP is crowd-sourced from driver reports; the app does not detect blockages
+                   automatically. MVP alerts surface during an active trip while the app is in use, and the full background-location
+                   architecture is built in the MVP, but always-on background detection, sensor fusion, computer vision,
+                   train-position integration, and train-speed prediction are a later phase.
+              •​   The 15-minute freshness window, the 200-foot route corridor, and the roughly one-mile reporting range ship at
+                   these defaults and are tuned during the pilot.
+              •​   RailRover provides informational guidance and warnings only. It does not control the vehicle, and drivers
+                   remain responsible for their own driving decisions and for obeying actual crossing signals and signage.
+              •​   You own the Terms of Service, Privacy Policy, and the data-rights language governing collected location and
+                   report data, and Bolder Apps integrates acceptance into the app.
+
+
+
+           Dependencies
+              •​ Apple Developer Program and Google Play Console accounts owned and provided by you.
+              •​ You own and configure the domain and DNS records for the Web Admin Panel before launch.
+              •​ Patent and freedom-to-operate clearance is confirmed by your counsel before development begins.
+              •​ A Google Maps Platform account with billing enabled is provided under your ownership before related
+                 development begins.
+              •​ You provide finalized brand guidelines, including logo, colors, and typography, before Figma design begins.
+              •​ Figma design approval required before development begins.
+
+
+
+
+                                                                     Page 10
+
+
+
+Document Ref: QNZJP-QGWUO-ST8BC-3XA3G                                                                                                  Page 14 of 25
+   TECHNOLOGY STACK
+    Component                           Technology                Purpose
+
+    Mobile Apps                         React Native              Cross-platform iOS and Android app from one
+                                                                  codebase, latest stable OS at publishing
+
+    Web Admin Panel                     React                     Browser panel for staff to manage crossings,
+                                                                  review reports, and read pilot analytics
+
+    Backend Platform                    Supabase                  Managed Postgres database, authentication,
+                                                                  storage, and backend APIs
+
+    Maps and Routing                    Google Maps Platform      Map display, geocoding, route options with
+                                                                  crossing counts, and rerouting
+
+    Real-Time                           Supabase Realtime         Live crossing-status updates pushed to active
+                                                                  trips as new reports arrive
+
+    Push Notifications                  Expo + FCM                Route alerts and broadcast messages to iOS
+                                                                  and Android
+
+    Error Monitoring                    Sentry                    Crash and error monitoring across mobile and
+                                                                  web (optional)
+
+    Admin Hosting                       Vercel                    Hosting for the Web Admin Panel
+
+    Distribution                        App Store + Google Play   Publishing and updates for the apps
+
+
+   Note: This tech stack is recommended for scalability, performance, and rapid development. We are open to
+   discussing any preferred technologies or alternative solutions to align with your vision.
+
+
+
+
+Document Ref: QNZJP-QGWUO-ST8BC-3XA3G                                                                         Page 15 of 25
+        TIMELINE
+                START
+
+
+
+      1-2                         Discovery + Design
+      WEEKS
+                                  Define requirements, create wireframes,
+                                  and finalize UI/UX designs.
+
+
+
+
+                                                                              6-7 WEEKS
+          4                       Development & QA
+      WEEKS
+                                  Build core features, set up backend
+                                  integrations, and implement frontend
+                                  interfaces. Conduct functional,
+                                  performance, and security testing to
+                                  ensure app stability.
+
+
+
+
+           1                      App Submission
+       WEEK                       Prepare builds, submit to app stores, and
+                                  handle compliance and publishing steps.
+
+                  LIVE
+
+
+Document Ref: QNZJP-QGWUO-ST8BC-3XA3G                                                 Page 16 of 25
+

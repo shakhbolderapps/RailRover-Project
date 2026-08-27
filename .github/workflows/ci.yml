@@ -1,0 +1,192 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------------------------------------
+  # Gate 1 — platform parity. Runs FIRST and fails fast, because the client directive is that the
+  # iOS codebase must never fall behind Android. See docs/PLATFORM-PARITY.md.
+  # ---------------------------------------------------------------------------------------------
+  parity:
+    name: Platform parity (Android ↔ iOS)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: No orphan platform files, no one-armed platform branches, no unpaired permissions
+        run: pnpm parity
+      - name: specs/ still matches the SOW verbatim
+        run: python3 scripts/generate-specs.py --check
+
+  quality:
+    name: Typecheck, lint, unit tests
+    runs-on: ubuntu-latest
+    needs: parity
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+
+  # ---------------------------------------------------------------------------------------------
+  # Gate 2 — BOTH native projects must generate. This is the check that catches iOS config rot
+  # (a bad purpose string, a plugin with no iOS support, a missing entitlement) on the day it is
+  # introduced, rather than on the day an iOS device finally arrives.
+  #
+  # It proves iOS BUILDS. It does not prove iOS RUNS — that needs a device and an Apple
+  # Developer account. The distinction is deliberate and stated, not blurred.
+  # ---------------------------------------------------------------------------------------------
+  prebuild:
+    name: expo prebuild (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    needs: parity
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: android
+            os: ubuntu-latest
+          - platform: ios
+            os: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Placeholder google-services.json (FCM creds are not in git)
+        if: matrix.platform == 'android'
+        run: |
+          cat > apps/mobile/google-services.json <<'JSON'
+          {
+            "project_info": {
+              "project_number": "000000000000",
+              "project_id": "railrover-ci",
+              "storage_bucket": "railrover-ci.appspot.com"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+                  "android_client_info": { "package_name": "com.bolderapps.railrover" }
+                },
+                "oauth_client": [],
+                "api_key": [{ "current_key": "ci-placeholder-key" }],
+                "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
+              }
+            ],
+            "configuration_version": "1"
+          }
+          JSON
+
+      - name: Generate native project
+        working-directory: apps/mobile
+        run: pnpm expo prebuild --platform ${{ matrix.platform }} --clean --no-install
+
+      # iOS-specific structural proof: the Xcode project is well-formed and the purpose strings
+      # and entitlements actually landed in Info.plist. No signing certificate needed.
+      - name: Verify iOS project is well-formed
+        if: matrix.platform == 'ios'
+        working-directory: apps/mobile/ios
+        run: |
+          set -euo pipefail
+          xcodebuild -list -project *.xcodeproj
+          PLIST=$(find . -name 'Info.plist' -path '*RailRover*' | head -1)
+          echo "Checking $PLIST for required iOS declarations..."
+          /usr/libexec/PlistBuddy -c 'Print :NSLocationWhenInUseUsageDescription' "$PLIST"
+          /usr/libexec/PlistBuddy -c 'Print :NSLocationAlwaysAndWhenInUseUsageDescription' "$PLIST"
+          /usr/libexec/PlistBuddy -c 'Print :UIBackgroundModes' "$PLIST"
+
+      - name: Verify Android manifest has the paired permissions
+        if: matrix.platform == 'android'
+        working-directory: apps/mobile/android
+        run: |
+          set -euo pipefail
+          MANIFEST=app/src/main/AndroidManifest.xml
+          for perm in ACCESS_FINE_LOCATION ACCESS_COARSE_LOCATION POST_NOTIFICATIONS; do
+            grep -q "android.permission.$perm" "$MANIFEST" \
+              || { echo "::error::$perm missing from AndroidManifest.xml"; exit 1; }
+          done
+          echo "All paired permissions present."
+
+  # ---------------------------------------------------------------------------------------------
+  # Database — migrations + pgTAP.
+  #
+  # Skipped until SUPABASE_DB_URL is set, because no project has been provisioned yet
+  # (decisions/0007). It is wired up now so that the day credentials exist, the suite runs
+  # without anyone remembering to add a job.
+  # ---------------------------------------------------------------------------------------------
+  database:
+    name: Migrations + pgTAP
+    runs-on: ubuntu-latest
+    needs: parity
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Apply migrations and run pgTAP
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_DB_URL:-}" ]; then
+            echo "::warning::SUPABASE_DB_URL not set — migrations and pgTAP tests are UNVERIFIED."
+            echo "Every claim in supabase/tests/ remains unexecuted until this secret exists."
+            exit 0
+          fi
+          supabase db push --db-url "$SUPABASE_DB_URL"
+          supabase test db --db-url "$SUPABASE_DB_URL"
+
+  # ---------------------------------------------------------------------------------------------
+  # Gate 3 — the artifact the client can actually install today.
+  # ---------------------------------------------------------------------------------------------
+  android-apk:
+    name: Debug APK
+    runs-on: ubuntu-latest
+    needs: [quality, prebuild]
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: pnpm install --frozen-lockfile
+      - name: Placeholder google-services.json
+        run: cp .github/fixtures/google-services.ci.json apps/mobile/google-services.json
+      - working-directory: apps/mobile
+        run: pnpm expo prebuild --platform android --clean --no-install
+      - working-directory: apps/mobile/android
+        run: ./gradlew assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: railrover-debug-apk
+          path: apps/mobile/android/app/build/outputs/apk/debug/*.apk
+          retention-days: 14

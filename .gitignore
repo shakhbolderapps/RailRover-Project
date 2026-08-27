@@ -1,0 +1,31 @@
+node_modules/
+dist/
+build/
+.expo/
+.expo-shared/
+*.log
+.DS_Store
+
+# Expo prebuild output — native dirs are generated, never hand-edited.
+# See decisions/0006-expo-managed-workflow-for-platform-parity.md
+/apps/mobile/android/
+/apps/mobile/ios/
+
+# Secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Build artifacts
+*.apk
+*.aab
+*.ipa
+
+# Local data / routing
+/data/osm/
+/scripts/.routing-data/
+
+# FCM credentials — never committed
+apps/mobile/google-services.json
+apps/mobile/GoogleService-Info.plist

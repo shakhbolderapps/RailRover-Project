@@ -1,0 +1,30 @@
+{
+  "name": "railrover",
+  "private": true,
+  "packageManager": "pnpm@11.7.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "typecheck": "pnpm -r --parallel typecheck",
+    "lint": "pnpm -r --parallel lint",
+    "test": "pnpm -r --parallel test",
+    "parity": "node scripts/check-platform-parity.mjs",
+    "verify": "pnpm parity && pnpm typecheck && pnpm lint && pnpm test",
+    "android": "pnpm --filter @railrover/mobile android",
+    "ios": "pnpm --filter @railrover/mobile ios",
+    "apk": "pnpm --filter @railrover/mobile apk",
+    "admin": "pnpm --filter @railrover/admin dev",
+    "routing:up": "bash scripts/routing-up.sh",
+    "db:push": "supabase db push",
+    "db:reset": "supabase db reset",
+    "ingest": "pnpm --filter @railrover/scripts ingest --",
+    "ingest:dry": "pnpm --filter @railrover/scripts ingest -- --dry-run",
+    "db:test": "supabase test db",
+    "doctor": "bash scripts/doctor.sh"
+  },
+  "devDependencies": {
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.3"
+  }
+}

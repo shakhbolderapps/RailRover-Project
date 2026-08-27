@@ -1,0 +1,46 @@
+{
+  "$comment": "Machine-readable Android<->iOS capability pairing table. Enforced by scripts/check-platform-parity.mjs. Adding an Android permission here without its iOS counterpart in app.config.ts fails CI. See docs/PLATFORM-PARITY.md.",
+  "capabilities": [
+    {
+      "capability": "network",
+      "status": "active",
+      "android": ["android.permission.INTERNET"],
+      "ios": {},
+      "notes": "Implicit on iOS; no declaration required."
+    },
+    {
+      "capability": "foreground-location",
+      "status": "active",
+      "android": [
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ],
+      "ios": { "NSLocationWhenInUseUsageDescription": "usage-description" },
+      "notes": "SOW M1: map centering, nearest-crossing report selection, route checks."
+    },
+    {
+      "capability": "background-location",
+      "status": "deferred",
+      "android": [
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE_LOCATION"
+      ],
+      "ios": { "NSLocationAlwaysAndWhenInUseUsageDescription": "usage-description" },
+      "notes": "Deferred for BOTH platforms per SOW ('can be enabled in a later phase without rework'). Config declared now so enabling it is an implementation swap, not a native-config discovery exercise."
+    },
+    {
+      "capability": "push-notifications",
+      "status": "active-android-only",
+      "android": ["android.permission.POST_NOTIFICATIONS"],
+      "ios": { "aps-environment": "entitlement" },
+      "notes": "Gap #1 in the register: APNs delivery requires the Apple Developer Program account. The iOS token-registration code path is written and typechecked; only delivery is untestable. In-app inbox works on both platforms regardless."
+    },
+    {
+      "capability": "haptics-and-alerting",
+      "status": "active",
+      "android": ["android.permission.VIBRATE"],
+      "ios": {},
+      "notes": "No iOS declaration needed; CoreHaptics requires no permission."
+    }
+  ]
+}
