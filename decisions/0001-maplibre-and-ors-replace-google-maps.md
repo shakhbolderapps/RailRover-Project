@@ -23,7 +23,27 @@ Build against keyless / free-tier equivalents, behind adapters:
 | Route options + alternatives | OpenRouteService free key — 2,000/day, 40/min, `alternative_routes` up to 3 |
 | Reroute around a point | ORS `avoid_polygons` |
 | Destination typeahead | Photon |
-| Destination resolve | Nominatim (≤1 req/s, descriptive User-Agent) |
+| Destination resolve | Photon returns coordinates directly — Nominatim dropped, see update below |
+
+## Update, 2026-09-21 — measured, not assumed
+
+Two things in the table above turned out to be wrong once a real key existed and real calls were
+made:
+
+- **The free quota is 200/day, not 2,000.** A live call returned `x-ratelimit-limit: 200`. That is
+  10× less headroom than this ADR assumed, and it lands directly on the risk already recorded
+  below. One route request with alternatives is one call, and a reroute is another, so a pilot
+  with even a handful of active drivers will feel it. **Raise with the client before pilot
+  launch**: either a higher ORS tier or the self-hosted Valhalla that ADR 0009's adapter boundary
+  already makes a drop-in swap.
+- **Nominatim is not used at all.** Photon returns coordinates in the feature geometry, so the
+  resolve step bought nothing while taking on Nominatim's 1 req/s policy and its habit of blocking
+  IPs without warning. Removing it removes the risk rather than managing it.
+
+Verified working at the same time: a Sylvania → Oregon request returned three options passing 2, 3
+and 5 crossings — two of them at identical travel times. That is the SOW's "similar time,
+different crossing counts" edge case occurring naturally on the first realistic pair tried, which
+is the clearest evidence so far that the feature is worth having.
 
 ## Consequences
 

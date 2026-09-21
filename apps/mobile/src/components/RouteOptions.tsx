@@ -27,8 +27,20 @@ const minutes = (seconds: number) => Math.max(1, Math.round(seconds / 60));
 export function RouteOptions({ options, selectedId, loading, error, onSelect, onClose }: Props) {
   const insets = useSafeAreaInsets();
 
-  const fewest = options.length > 0 ? Math.min(...options.map((o) => o.totalCrossings)) : 0;
-  const quickest = options.length > 0 ? Math.min(...options.map((o) => o.durationSeconds)) : 0;
+  /**
+   * A badge only earns its place when it distinguishes one option from the others. When every
+   * route ties on crossings — which happens often, since alternatives frequently rejoin the same
+   * rail corridors — labelling all of them "Fewest crossings" tells the driver nothing and makes
+   * the real signal harder to find. So these are awarded only to a UNIQUE winner.
+   */
+  const uniqueBest = (values: number[]): number | null => {
+    if (values.length < 2) return null;
+    const best = Math.min(...values);
+    return values.filter((value) => value === best).length === 1 ? best : null;
+  };
+
+  const fewest = uniqueBest(options.map((o) => o.totalCrossings));
+  const quickest = uniqueBest(options.map((o) => o.durationSeconds));
 
   return (
     <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
@@ -61,10 +73,10 @@ export function RouteOptions({ options, selectedId, loading, error, onSelect, on
               <Text style={styles.distance}>
                 {metersToMiles(option.distanceMeters).toFixed(1)} mi
               </Text>
-              {option.durationSeconds === quickest ? (
+              {quickest !== null && option.durationSeconds === quickest ? (
                 <Text style={styles.tag}>Quickest</Text>
               ) : null}
-              {option.totalCrossings === fewest && options.length > 1 ? (
+              {fewest !== null && option.totalCrossings === fewest ? (
                 <Text style={styles.tag}>Fewest crossings</Text>
               ) : null}
             </View>

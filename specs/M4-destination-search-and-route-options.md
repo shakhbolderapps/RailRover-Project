@@ -41,19 +41,22 @@ number in the test name (see AGENTS.md §6, Definition of Done)._
 
 | Criterion | Assertion | Status |
 |---|---|---|
-| 1 | ◐ `packages/shared/src/geocoding.test.ts` → label composition and `[longitude, latitude]` parsing; destination entry verified on the Pixel 7 emulator against the live Photon instance ("Toledo Zoo" → five real suggestions). Route **drawing** is built but unverified — see note | ◐ |
-| 2 | ◐ `supabase/tests/070-crossings-on-route.sql` (11 assertions) proves the corridor query the counts are built on, including a crossing 5 km along the route. The route cards render time, total and blocked, but have not been seen with real routes — see note | ◐ |
-| 3 | ◐ `stores/route.ts` holds the selected option as the ACTIVE route and `selectActiveRoute` is what Phase 6 will read. Unverified end to end — see note | ◐ |
-| 4 | ◐ `apps/mobile/src/lib/routes.test.ts` → not-found, no-route, both quota limits, and "never surfaces a raw upstream error string". The missing-key path was verified on device; the genuine ORS failure codes have not been exercised against the live service | ◐ |
+| 1 | ✅ `packages/shared/src/geocoding.test.ts` → label composition and `[longitude, latitude]` parsing. Verified live on the Pixel 7 emulator: "Sylvania Ohio" → suggestions → three routes drawn on the map | ✅ |
+| 2 | ✅ `supabase/tests/070-crossings-on-route.sql` (11 assertions) proves the corridor query, including a crossing 5 km along the route. Verified live: cards render "22 min · 15.7 mi · 2 crossings · None blocked now" | ✅ |
+| 3 | ✅ `stores/route.ts` holds the selected option as the ACTIVE route; `selectActiveRoute` is what Phase 6 reads. Verified live: the selected card is outlined, the chosen line is drawn heavier, and the summary switches to "0 blocked crossings on your route · 2 total" | ✅ |
+| 4 | ◐ `apps/mobile/src/lib/routes.test.ts` → not-found, no-route, both quota limits, and "never surfaces a raw upstream error string". The missing-key path was verified on device; the genuine ORS failure codes have not been provoked against the live service | ◐ |
 
 Legend: ✅ covered · ◐ partially covered (see note) · ☐ not yet written
 
-**Note on why these are all partial.** Everything except live routing is built and verified:
-destination search runs against the real Photon instance, and the crossing-corridor query has 11
-pgTAP assertions against the real database. What is missing is an **OpenRouteService API key** —
-free and self-service, but absent from this build, so no real route has ever been fetched. The app
-says so plainly rather than failing generically. These move to ✅ once a key exists and a known
-Toledo A→B pair returns 2–3 options with differing crossing counts, verified against the map.
+**Note on what "verified" means here.** A real OpenRouteService key now exists, and a
+Sylvania → Oregon request returned three options passing 2, 3 and 5 crossings — two of them at
+identical travel times, which is the SOW's "similar time, different crossing counts" edge case
+occurring on the first realistic pair tried. Criterion 4 stays partial because provoking a genuine
+quota-exceeded or no-route response from ORS would mean either burning the daily allowance or
+waiting for a real failure; the mapping is unit-tested instead.
+
+**Note on the free tier.** The live quota header reads `x-ratelimit-limit: 200`, not the 2,000/day
+ADR 0001 assumed. Recorded there; needs raising with the client before pilot launch.
 
 **Note on the edge case worth watching.** "Toledo" is ambiguous: Photon's location bias is soft,
 and a search from Toledo, Ohio still returns results in Toledo, Spain. Harmless but odd-looking,
