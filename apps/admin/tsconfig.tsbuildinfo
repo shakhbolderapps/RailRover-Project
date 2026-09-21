@@ -1,1 +1,1 @@
-{"root":["./src/app.tsx","./src/main.tsx","./src/lib/admin.ts","./src/lib/supabase.ts","./vite.config.ts"],"version":"5.9.3"}
+{"root":["./src/app.tsx","./src/crossingeditor.tsx","./src/main.tsx","./src/lib/admin.ts","./src/lib/crossings.ts","./src/lib/supabase.ts","./vite.config.ts"],"version":"5.9.3"}

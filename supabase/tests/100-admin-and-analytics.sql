@@ -7,7 +7,7 @@
 -- hiding a route — a test that only ever calls these as an admin proves nothing about that.
 
 begin;
-select plan(18);
+select plan(24);
 
 select has_table('alert_events', 'alert_events table exists');
 select has_table('reroute_events', 'reroute_events table exists');
@@ -147,6 +147,58 @@ select lives_ok(
 select ok(
   (select is_suspended from devices where device_id = 'admin-test-device'),
   'the device is suspended afterwards, so submit_report will refuse it'
+);
+
+-- ---------------------------------------------------------------------------------------------
+-- Crossing inventory management (SOW M5). Admins write `crossings` directly under the
+-- crossings_admin_write policy — 050-rls.sql already asserts a driver CANNOT, so the assertions
+-- here are the admin half of that same boundary.
+-- ---------------------------------------------------------------------------------------------
+select lives_ok(
+  $$insert into crossings (dot_id, name, road, city, state, geom)
+    values ('ADMIN-NEW', 'Added By Admin', 'New Rd', 'Toledo', 'Ohio',
+            st_setsrid(st_makepoint(-83.60, 41.70), 4326)::geography)$$,
+  'M5-Inventory-AC1: an ADMIN can add a crossing'
+);
+
+select lives_ok(
+  $$update crossings set name = 'Renamed By Admin' where dot_id = 'ADMIN-NEW'$$,
+  'M5-Inventory-AC1: an ADMIN can edit a crossing'
+);
+
+-- M5-Inventory-AC2: a coordinate correction must reach everything that reads the inventory.
+-- There is only one table, so it does — but "it obviously does" is how this stops being true.
+update crossings
+set geom = st_setsrid(st_makepoint(-83.55, 41.66), 4326)::geography
+where dot_id = 'ADMIN-NEW';
+
+select is(
+  (select round(longitude::numeric, 3) from crossing_status where dot_id = 'ADMIN-NEW'),
+  round((-83.55)::numeric, 3),
+  'M5-Inventory-AC2: a coordinate correction is visible through crossing_status at once'
+);
+
+select is(
+  (select count(*)::int from crossings_on_route(
+     '{"type":"LineString","coordinates":[[-83.56,41.66],[-83.54,41.66]]}'::jsonb
+   ) where dot_id = 'ADMIN-NEW'),
+  1,
+  'M5-Inventory-AC2: the corrected coordinates reach the ROUTE logic, not just the map'
+);
+
+-- Retiring rather than deleting: reports reference crossings, and the history is the audit trail
+-- that makes abuse review possible.
+select lives_ok(
+  $$update crossings set is_active = false where dot_id = 'ADMIN-NEW'$$,
+  'M5-Inventory-AC1: an ADMIN can retire a crossing'
+);
+
+select is(
+  (select count(*)::int from crossings_on_route(
+     '{"type":"LineString","coordinates":[[-83.56,41.66],[-83.54,41.66]]}'::jsonb
+   ) where dot_id = 'ADMIN-NEW'),
+  0,
+  'M5-Inventory-AC3: a retired crossing drops out of the route logic immediately'
 );
 
 reset role;

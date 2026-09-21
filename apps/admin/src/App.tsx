@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import { CrossingEditor } from './CrossingEditor';
 import { getSupabase, isConfigured } from './lib/supabase';
 import {
   broadcast,
@@ -267,6 +268,8 @@ function Panel() {
           </tbody>
         </table>
       </section>
+
+      <CrossingEditor onNotice={setNotice} />
 
       <Broadcast onSent={(message) => setNotice(message)} />
     </div>

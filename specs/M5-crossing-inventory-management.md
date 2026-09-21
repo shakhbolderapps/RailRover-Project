@@ -37,11 +37,22 @@ number in the test name (see AGENTS.md §6, Definition of Done)._
 
 | Criterion | Assertion | Status |
 |---|---|---|
-| 1 | ☐ Not built. Add/edit/remove and coordinate correction need the MapLibre GL editor; the panel currently covers report review, user management, broadcasts and analytics | ☐ |
-| 2 | ☐ Not built — see above | ☐ |
-| 3 | ◐ The mechanism is proven: `020-crossings-schema.sql` → "M5: a coordinate correction is visible through crossing_status immediately", because every reader queries the same table. The admin UI to perform the edit does not exist yet | ◐ |
+| 1 | ✅ `supabase/tests/100-admin-and-analytics.sql` → "an ADMIN can add a crossing", "…can edit a crossing", "…can retire a crossing". `050-rls.sql` asserts the other half: a driver cannot | ✅ |
+| 2 | ✅ `100-admin-and-analytics.sql` → "a coordinate correction is visible through crossing_status at once" AND "the corrected coordinates reach the ROUTE logic, not just the map" | ✅ |
+| 3 | ✅ `100-admin-and-analytics.sql` → "a retired crossing drops out of the route logic immediately" | ✅ |
+
 Legend: ✅ covered · ◐ partially covered (see note) · ☐ not yet written
 
-**Note on what is missing.** This is the one M5 feature not built in Phase 8. It needs a MapLibre
-GL JS editor with a draggable marker, and the admin-write RLS policy it depends on already exists
-(`crossings_admin_write`). Recorded as not done rather than folded into a partial claim.
+**Note on criterion 2, which is easy to under-test.** "Updates the map and the route conflict
+logic" has two halves, and asserting only the first would pass while the second silently broke.
+The second assertion runs the corrected coordinates through `crossings_on_route` — the real route
+query — rather than trusting that one table means one answer.
+
+**Note on "remove".** Retiring, not deleting. Reports reference crossings, and that history is the
+audit trail that makes abuse review possible; `is_active = false` takes the crossing out of the
+map, nearest-crossing selection and the route logic immediately, which is what an operator means
+by remove.
+
+**Note on what is NOT verified.** The editor builds and lints clean, but has not been opened in a
+browser — no Chrome connection was available in this environment. Dragging the marker, saving, and
+seeing the driver map update is a manual pass still outstanding.
