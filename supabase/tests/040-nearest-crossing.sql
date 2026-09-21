@@ -9,6 +9,16 @@ select plan(8);
 
 select has_function('nearest_crossing', 'nearest_crossing() exists');
 
+-- These assertions are about which crossing is NEAREST, which is a question about the whole
+-- inventory, not just about the fixtures below. Once the FRA ingest ran, the real inventory
+-- contained a crossing 2,450 m from the pilot centre — nearer than this file's own "2 miles
+-- away" fixture — and three assertions started failing on data rather than on logic.
+--
+-- So take control of the inventory explicitly. The delete is inside the test transaction and is
+-- undone by the rollback at the end of the file; it never touches the real table. Stating the
+-- isolation requirement beats depending on the table happening to be empty.
+delete from crossings;
+
 -- Fixture: two crossings at known distances due north of a driver at the Toledo pilot centre.
 -- 1 degree of latitude ~= 111,320 m, so the offsets below are ~0.5 mi and ~2 mi.
 insert into crossings (dot_id, name, road, city, state, geom) values

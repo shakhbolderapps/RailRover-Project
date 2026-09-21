@@ -105,8 +105,10 @@ describe('toCrossingRow', () => {
     if (!('row' in result)) return;
 
     expect(result.row.dot_id).toBe('473988W');
-    expect(result.row.latitude).toBeCloseTo(41.6528, 4);
-    expect(result.row.longitude).toBeCloseTo(-83.5379, 4);
+    // EWKT is POINT(longitude latitude) — the opposite order to the FRA record and to how the
+    // coordinates read in every other part of this codebase. Asserted literally, because a
+    // swapped pair puts every Toledo crossing in the Indian Ocean and still type-checks.
+    expect(result.row.geom).toBe('SRID=4326;POINT(-83.5379 41.6528)');
     expect(result.row.road).toBe('Central Ave');
     expect(result.row.city).toBe('Toledo');
     expect(result.row.state).toBe('Ohio');

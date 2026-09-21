@@ -109,13 +109,22 @@ export interface CrossingRow {
   city: string | null;
   state: string | null;
   railroad: string | null;
-  latitude: number;
-  longitude: number;
+  /**
+   * EWKT, which Postgres casts to `geography(Point, 4326)` on insert. The table has no
+   * latitude/longitude columns — `geom` is the single spatial source of truth, and readers get
+   * lat/lng back from the `crossing_status` view via ST_Y/ST_X. Note the axis order: EWKT is
+   * POINT(longitude latitude), the opposite of how the FRA record reads.
+   */
+  geom: string;
   is_active: boolean;
   is_at_grade: boolean;
   source: string;
   source_updated_at: string | null;
 }
+
+/** EWKT for a lat/lng pair. Written down once so the lng-then-lat order cannot be got wrong. */
+export const toEwktPoint = (latitude: number, longitude: number): string =>
+  `SRID=4326;POINT(${longitude} ${latitude})`;
 
 /**
  * Map a raw FRA record to a crossings row, or return null with a reason if it is unusable.
@@ -151,8 +160,7 @@ export function toCrossingRow(record: FraRecord): { row: CrossingRow } | { skip:
       city,
       state: clean(record.statename),
       railroad: clean(record.railroadname),
-      latitude,
-      longitude,
+      geom: toEwktPoint(latitude, longitude),
       is_active: true,
       is_at_grade: true, // guaranteed by the at-grade filter; the DB CHECK enforces it too
       source: 'FRA',
