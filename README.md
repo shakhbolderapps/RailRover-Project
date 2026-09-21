@@ -92,7 +92,6 @@ It is reversible in one file.
 | Brand guidelines + Figma approval | — | SOW lists both as dependencies before development |
 | ToS + Privacy Policy | — | Gate App Store / Play submission |
 | Pilot radius decision | — | SOW says ~200 mi around Toledo; see [ADR 0008](decisions/0008-pilot-radius-staged-ingest.md) |
-| **Supabase project** | free | **Blocking Phase 2.** Migrations and pgTAP tests are written but have never been executed |
 
 Both store accounts are **client-owned SOW dependencies**, not engineering debt. $124 total
 arriving in week six delays submission.
@@ -102,7 +101,7 @@ arriving in week six delays submission.
 | Phase | Status |
 |---|---|
 | 0 — Foundation & guardrails | ✅ complete |
-| 1 — Crossing data & schema | ✅ code complete · ⧗ SQL unexecuted (needs a Supabase project) |
+| 1 — Crossing data & schema | ✅ complete · migrations pushed, all 52 pgTAP assertions pass on the hosted project |
 | 2 — Reporting engine | next |
 | 3 — Mobile shell: auth, location, map | |
 | 4 — Report flows | |
