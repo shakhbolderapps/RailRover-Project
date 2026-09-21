@@ -40,7 +40,7 @@ number in the test name (see AGENTS.md §6, Definition of Done)._
 |---|---|---|
 | 1 | ✅ `packages/shared/src/time.test.ts` → "M2 Crossing-Detail AC1: reports minutes for recent reports" and "…returns null for a crossing with no reports"; `crossing-status.test.ts` → "a crossing with no reports is UNKNOWN, not green"; `supabase/tests/030` → report_count and last_reported_at resolution. Rendered by `components/CrossingDetail.tsx`, verified on the Pixel 7 emulator | ✅ |
 | 2 | ☐ Needs route conflict detection (Phase 6a) | ☐ |
-| 3 | ☐ Needs the report flows (Phase 4) | ☐ |
+| 3 | ◐ The detail sheet carries the same Blocked/Clear buttons as the map, opening `ReportSheet` with the crossing already chosen so auto-selection is skipped. Built, but the device pass exercised the map's buttons rather than this path | ◐ |
 
 Legend: ✅ covered · ◐ partially covered (see note) · ⧗ assertion written but never executed · ☐ not yet written
 

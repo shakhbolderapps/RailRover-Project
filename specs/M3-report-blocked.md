@@ -41,7 +41,7 @@ number in the test name (see AGENTS.md §6, Definition of Done)._
 
 | Criterion | Assertion | Status |
 |---|---|---|
-| 1 | _not yet written_ — two-tap flow is Phase 4. **Also requires a stopwatch pass on device**: an under-five-seconds requirement cannot be proven by a unit test, and must be timed separately on iOS once a device exists | ☐ |
+| 1 | ◐ Two-tap flow built and exercised on the Pixel 7 emulator: "Blocked" → sheet auto-selects the nearest crossing ("Fasset Street · Right here") → "Confirm blocked" → written. **The under-five-seconds half is still unproven**: it cannot be asserted by a unit test and needs a stopwatch pass with a mounted phone — on Android now, and on iOS once a device exists | ◐ |
 | 2 | ✅ `geo.test.ts` → "0.9 mi is inside the report radius and 1.1 mi is outside"; `supabase/tests/040` → nearest_crossing radius bound and app_config default; `supabase/tests/060-submit-report.sql` → "M3-AC2: a driver 0.9 mi from a crossing CAN report it" / "...1.1 mi...CANNOT" | ✅ |
 | 3 | ✅ `supabase/tests/060-submit-report.sql` → "M3-AC3: the report records the device identifier" / "...the status" / "...a fresh timestamp" | ✅ |
 | 4 | ✅ `supabase/tests/030` → "a new blocked report updates the crossing to red"; `supabase/tests/060-submit-report.sql` → "M3-AC4: a new blocked report shows the crossing as red immediately", plus most-recent-wins asserted end-to-end through `submit_report` itself | ✅ |

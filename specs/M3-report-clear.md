@@ -38,10 +38,10 @@ number in the test name (see AGENTS.md §6, Definition of Done)._
 
 | Criterion | Assertion | Status |
 |---|---|---|
-| 1 | _not yet written_ — shares the Phase 4 flow with Report Blocked | ☐ |
+| 1 | ◐ Shares the flow with Report Blocked; exercised on the emulator ("Clear" → "Fasset Street · Right here" → "Confirm clear"). The five-second budget still needs a stopwatch pass | ◐ |
 | 2 | `crossing-status.test.ts` → "a crossing NEVER returns to green on a timer"; `supabase/tests/010` → day-old and month-old blocked reports still yellow | ✅ |
 | 3 | ✅ `geo.test.ts` distance math + `supabase/tests/040-nearest-crossing.sql` radius bound; `supabase/tests/060-submit-report.sql` → server enforcement via `submit_report` | ✅ |
-| 4 | `supabase/tests/030-crossing-status-view.sql` → "blocked then clear 30 seconds later → green" and "clear then blocked → red (most recent wins, in both directions)"; `supabase/tests/060-submit-report.sql` → the same property asserted end-to-end through `submit_report` itself | ✅ |
+| 4 | ✅ `supabase/tests/030-crossing-status-view.sql` → "blocked then clear 30 seconds later → green" and "clear then blocked → red (most recent wins, in both directions)"; `supabase/tests/060-submit-report.sql` → the same property through `submit_report`. Also walked through the real app on 2026-09-21: Fasset Street reported blocked (red, 1 report) then clear (green, 2 reports) | ✅ |
 
 Legend: ✅ covered · ◐ partially covered (see note) · ⧗ assertion written but never executed · ☐ not yet written
 

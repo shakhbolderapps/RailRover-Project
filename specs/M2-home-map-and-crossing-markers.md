@@ -43,7 +43,7 @@ number in the test name (see AGENTS.md §6, Definition of Done)._
 |---|---|---|
 | 1 | ◐ `stores/location.test.ts` covers the position feed; the centring itself is `trackUserLocation` on the MapLibre camera, verified by hand on the Pixel 7 emulator. No automated assertion — see note | ◐ |
 | 2 | ✅ `packages/shared/src/crossing-status.test.ts` → "M2-AC2: a fresh blocked report shows RED" / "…aged past the freshness window shows YELLOW" / "…a clear report shows GREEN"; `apps/mobile/src/lib/crossings.test.ts` → "M2-AC2: carries the computed colour through to the marker properties" | ✅ |
-| 3 | ☐ The map, markers and crossing detail are in place, but destination search is Phase 5 and the report/route actions are Phase 4. Deliberately NOT stubbed with dead controls | ☐ |
+| 3 | ◐ Report actions are at the bottom (Phase 4). Destination search and route actions are Phase 5 and are deliberately absent rather than stubbed with dead controls | ◐ |
 | 4 | ☐ Needs route conflict detection (Phase 6a) | ☐ |
 
 Legend: ✅ covered · ◐ partially covered (see note) · ☐ not yet written
