@@ -98,7 +98,32 @@ Asserted by pgTAP, not by inspection — 140 assertions across 10 files:
   `SUPABASE_ANON_KEY` are unset the workflow skips with a warning, so the pause risk is live until
   someone confirms them in repo settings.
 
-## 7. What Phase 10 did NOT verify
+## 7. Distributing the test APK
+
+`pnpm apk release` produces an installable APK with no Play Console account, which is how pilot
+testers get the app until that $25 dependency is funded. Three things about that build are worth
+knowing before it is sent to anyone.
+
+**It is signed with the DEBUG keystore.** Expo's template sets `signingConfig signingConfigs.debug`
+for the release build type, with the well-known `android`/`androiddebugkey` credentials. That is
+fine for a trusted test group and is what makes the APK installable at all, but:
+
+- it can never be promoted to a Play listing as-is, and
+- once a real keystore exists, testers must **uninstall before installing** the properly signed
+  build — Android refuses an update whose signature changed.
+
+Generate a real keystore before the first build anyone outside the team keeps.
+
+**It contains the OpenRouteService key.** Expo inlines `EXPO_PUBLIC_*` values into the JS bundle,
+so anyone holding the APK can extract it. Against a **200 request/day** quota, a handful of testers
+— or one person who pulls the key out — can exhaust routing for the day. Moving routing behind a
+Supabase Edge Function would fix both this and the quota exposure in one change, and the routing
+adapter boundary (ADR 0009) already makes that a single implementation swap.
+
+**Push does not work in it.** `google-services.json` is a placeholder, so testers get the in-app
+inbox and nothing else. That is the documented degradation, not a defect.
+
+## 8. What Phase 10 did NOT verify
 
 Stated plainly rather than left to be discovered:
 
