@@ -25,8 +25,14 @@ export default function WelcomeScreen() {
     setError(null);
     const result = await continueAsGuest();
     setBusy(false);
-    if (!result.ok) setError(result.error ?? null);
-    // On success the auth listener flips status to `guest` and index.tsx redirects to the map.
+    if (!result.ok) {
+      setError(result.error ?? null);
+      return;
+    }
+    // Navigate explicitly. The auth listener updates `status`, but nothing re-renders index.tsx
+    // while we are sitting on /welcome, so waiting for its redirect leaves the driver stranded
+    // here on a screen whose button has silently already worked.
+    router.replace('/');
   };
 
   return (

@@ -17,7 +17,7 @@
     "apk": "bash ../../scripts/build-apk.sh"
   },
   "dependencies": {
-    "@maplibre/maplibre-react-native": "^10.2.0",
+    "@maplibre/maplibre-react-native": "^11.4.0",
     "@railrover/shared": "workspace:*",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@supabase/supabase-js": "^2.49.4",

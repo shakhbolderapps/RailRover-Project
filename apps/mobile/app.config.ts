@@ -113,6 +113,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   plugins: [
     'expo-router',
     'expo-secure-store',
+    // Configures Android gradle properties and the iOS Podfile (global variables, post-install,
+    // dSYM handling) for MapLibre's native SDK. Listed for BOTH platforms in one call, so the
+    // iOS side cannot silently fall behind — the parity rule above applies to plugins too.
+    '@maplibre/maplibre-react-native',
     [
       'expo-splash-screen',
       {

@@ -41,12 +41,24 @@ number in the test name (see AGENTS.md §6, Definition of Done)._
 
 | Criterion | Assertion | Status |
 |---|---|---|
-| 1 | _not yet written_ — needs the live map (Phase 3c) | ☐ |
-| 2 | `packages/shared/src/crossing-status.test.ts` → "M2-AC2: a fresh blocked report shows RED" / "…aged past the freshness window shows YELLOW" / "…a clear report shows GREEN" | ✅ |
-| 3 | _not yet written_ — needs the home map layout (Phase 3c) | ☐ |
-| 4 | _not yet written_ — needs route conflict detection (Phase 6a) | ☐ |
+| 1 | ◐ `stores/location.test.ts` covers the position feed; the centring itself is `trackUserLocation` on the MapLibre camera, verified by hand on the Pixel 7 emulator. No automated assertion — see note | ◐ |
+| 2 | ✅ `packages/shared/src/crossing-status.test.ts` → "M2-AC2: a fresh blocked report shows RED" / "…aged past the freshness window shows YELLOW" / "…a clear report shows GREEN"; `apps/mobile/src/lib/crossings.test.ts` → "M2-AC2: carries the computed colour through to the marker properties" | ✅ |
+| 3 | ☐ The map, markers and crossing detail are in place, but destination search is Phase 5 and the report/route actions are Phase 4. Deliberately NOT stubbed with dead controls | ☐ |
+| 4 | ☐ Needs route conflict detection (Phase 6a) | ☐ |
 
 Legend: ✅ covered · ◐ partially covered (see note) · ☐ not yet written
+
+**Note on criterion 1.** The camera follows the driver via MapLibre's `trackUserLocation`, which
+also disengages when the driver pans — deliberate, so looking ahead along a route does not fight
+the camera. What is unit-tested is everything feeding it: permission is requested before tracking
+starts, and live fixes update the store. The centring itself is native camera behaviour and was
+checked by hand rather than asserted; a meaningful automated test would need a MapLibre test
+harness that does not exist here.
+
+**Note on marker rendering.** Markers are a clustered GeoJSON source styled by the `color`
+property, with viewport-bounded loading through `crossings_in_bounds` — the map never fetches the
+whole inventory. Clusters carry no status colour on purpose: a cluster of fifteen crossings has no
+single status, so a neutral count is the honest rendering.
 
 **Note on criterion 2.** The colour *rules* are covered in the shared package. The `crossing_status`
 SQL view implements the same rules and gets its own pgTAP assertions in Phase 1 — two
