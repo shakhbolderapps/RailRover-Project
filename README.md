@@ -107,8 +107,8 @@ arriving in week six delays submission.
 | 4 — Report flows | ✅ complete · two-tap blocked/clear, server-validated; ⧗ five-second stopwatch pass outstanding |
 | 5 — Destination & route options | ✅ complete · live routing with per-route crossing counts |
 | 6 — Conflict detection, alerts, reroute | ✅ code complete · route simulator covers the behaviours; ⧗ not yet seen on device mid-trip |
-| 7 — Notifications | next |
-| 8–9 — Admin panel & analytics | |
+| 7 — Notifications | ◐ inbox complete · push delivery blocked on Firebase + Apple accounts |
+| 8–9 — Admin panel & analytics | next |
 | 10 — Hardening & release prep | |
 
 Plan: [`docs/RailRover-Agentic-Roadmap.md`](docs/RailRover-Agentic-Roadmap.md).

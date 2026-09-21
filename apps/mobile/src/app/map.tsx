@@ -18,7 +18,6 @@ import { Button } from '@/components/Button';
 import { CrossingDetail } from '@/components/CrossingDetail';
 import { LocationNotice } from '@/components/LocationNotice';
 import { palette, statusColors } from '@/theme/colors';
-import { useSession } from '@/stores/session';
 import { useLocation } from '@/stores/location';
 import { ActiveAlerts } from '@/components/ActiveAlerts';
 import { ConflictAlert } from '@/components/ConflictAlert';
@@ -48,8 +47,6 @@ const INITIAL_ZOOM = 13;
 
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
-  const status = useSession((s) => s.status);
-  const signOut = useSession((s) => s.signOut);
 
   const permission = useLocation((s) => s.permission);
   const fix = useLocation((s) => s.fix);
@@ -114,7 +111,10 @@ export default function MapScreen() {
     }
     startConflictWatch(activeRoute.coordinates, fix);
     return () => stopConflictWatch();
-     
+    // `fix` and `activeRoute` are deliberately excluded. Position is fed in through
+    // updatePosition below; including it here would restart the watch on every GPS update,
+    // tearing down and rebuilding the Realtime subscription several times a minute.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeRoute?.id, startConflictWatch, stopConflictWatch]);
 
   useEffect(() => {
@@ -468,21 +468,20 @@ export default function MapScreen() {
             />
           </View>
 
-          {status === 'guest' ? (
+          <View style={styles.links}>
             <Button
-              label="Create an account"
+              label="Notifications"
               variant="ghost"
-              onPress={() => router.push('/sign-up')}
+              onPress={() => router.push('/inbox')}
+              style={styles.link}
             />
-          ) : (
             <Button
-              label="Sign out"
+              label="Settings"
               variant="ghost"
-              onPress={() => {
-                void signOut().then(() => router.replace('/'));
-              }}
+              onPress={() => router.push('/settings')}
+              style={styles.link}
             />
-          )}
+          </View>
         </View>
       )}
     </View>
@@ -510,6 +509,8 @@ const styles = StyleSheet.create({
   bottom: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: 12, gap: 8 },
   sheetWrap: { position: 'absolute', left: 0, right: 0, bottom: 0 },
   actions: { flexDirection: 'row', gap: 10 },
+  links: { flexDirection: 'row', gap: 8 },
+  link: { flex: 1 },
   action: { flex: 1, minHeight: 64 },
   attribution: { color: palette.textMuted, fontSize: 10, textAlign: 'center' },
 });

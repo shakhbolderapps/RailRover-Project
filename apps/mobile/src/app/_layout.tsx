@@ -52,6 +52,8 @@ export default function RootLayout() {
             <Stack.Screen name="map" options={{ headerShown: false }} />
             <Stack.Screen name="sign-in" options={{ title: 'Sign in' }} />
             <Stack.Screen name="sign-up" options={{ title: 'Create account' }} />
+            <Stack.Screen name="inbox" options={{ title: 'Notifications' }} />
+            <Stack.Screen name="settings" options={{ title: 'Settings' }} />
           </Stack>
         )}
       </SafeAreaProvider>

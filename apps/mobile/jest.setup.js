@@ -23,6 +23,14 @@ jest.mock('expo-secure-store', () => {
   };
 });
 
+// Importing the real module registers a device-push listener and warns about Expo Go, which is
+// noise in a suite that only exercises the pure helpers beside it.
+jest.mock('expo-notifications', () => ({
+  getPermissionsAsync: jest.fn(async () => ({ granted: false, canAskAgain: true })),
+  requestPermissionsAsync: jest.fn(async () => ({ granted: true, canAskAgain: false })),
+  getExpoPushTokenAsync: jest.fn(async () => ({ data: 'ExponentPushToken[test]' })),
+}));
+
 jest.mock('expo-crypto', () => {
   let counter = 0;
   return {
