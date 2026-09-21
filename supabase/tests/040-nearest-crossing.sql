@@ -5,7 +5,7 @@
 -- lookup those checks are built on.
 
 begin;
-select plan(7);
+select plan(8);
 
 select has_function('nearest_crossing', 'nearest_crossing() exists');
 

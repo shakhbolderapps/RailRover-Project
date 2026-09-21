@@ -42,10 +42,11 @@ select lives_ok(
   'an anonymous driver CAN read computed crossing status'
 );
 
+with t as (
+  update crossings set name = 'Hacked' where dot_id = 'RLS-TEST' returning 1
+)
 select is(
-  (select count(*)::int from (
-     update crossings set name = 'Hacked' where dot_id = 'RLS-TEST' returning 1
-   ) t),
+  (select count(*)::int from t),
   0,
   'SOW §7: an anonymous key CANNOT update a crossing'
 );
@@ -68,10 +69,11 @@ select throws_ok(
   'ADR 0004: a client CANNOT insert a report directly — it must go through submit_report()'
 );
 
+with t as (
+  update app_config set value = '9999' where key = 'freshness_window_minutes' returning 1
+)
 select is(
-  (select count(*)::int from (
-     update app_config set value = '9999' where key = 'freshness_window_minutes' returning 1
-   ) t),
+  (select count(*)::int from t),
   0,
   'an anonymous key CANNOT retune the freshness window'
 );
