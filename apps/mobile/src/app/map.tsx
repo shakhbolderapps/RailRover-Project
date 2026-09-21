@@ -20,7 +20,10 @@ import { LocationNotice } from '@/components/LocationNotice';
 import { palette, statusColors } from '@/theme/colors';
 import { useSession } from '@/stores/session';
 import { useLocation } from '@/stores/location';
+import { DestinationSearch } from '@/components/DestinationSearch';
 import { ReportSheet } from '@/components/ReportSheet';
+import { RouteOptions } from '@/components/RouteOptions';
+import { selectActiveRoute, useRoute } from '@/stores/route';
 import {
   applyReportedCrossing,
   fetchCrossingsInBounds,
@@ -44,8 +47,21 @@ export default function MapScreen() {
   const signOut = useSession((s) => s.signOut);
 
   const permission = useLocation((s) => s.permission);
+  const fix = useLocation((s) => s.fix);
   const startLocation = useLocation((s) => s.start);
   const stopLocation = useLocation((s) => s.stop);
+
+  const destination = useRoute((s) => s.destination);
+  const routeOptions = useRoute((s) => s.options);
+  const routeSelectedId = useRoute((s) => s.selectedId);
+  const routeLoading = useRoute((s) => s.loading);
+  const routeError = useRoute((s) => s.error);
+  const planTo = useRoute((s) => s.planTo);
+  const selectRoute = useRoute((s) => s.select);
+  const clearRoute = useRoute((s) => s.clear);
+  const activeRoute = useRoute(selectActiveRoute);
+
+  const [showRoutes, setShowRoutes] = useState(false);
 
   const [rows, setRows] = useState<CrossingRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -152,6 +168,36 @@ export default function MapScreen() {
         {permission === 'granted' ? <UserLocation animated /> : null}
 
         {/*
+          Route options drawn beneath the crossings, so the markers a driver is choosing between
+          stay on top of the lines that connect them (SOW M4-AC1).
+        */}
+        {routeOptions.length > 0 ? (
+          <GeoJSONSource
+            id="routes"
+            data={{
+              type: 'FeatureCollection',
+              features: routeOptions.map((option) => ({
+                type: 'Feature' as const,
+                id: option.id,
+                geometry: { type: 'LineString' as const, coordinates: option.coordinates },
+                properties: { id: option.id, selected: option.id === routeSelectedId },
+              })),
+            }}
+          >
+            <Layer
+              id="route-lines"
+              type="line"
+              layout={{ 'line-cap': 'round', 'line-join': 'round' }}
+              paint={{
+                'line-color': ['case', ['get', 'selected'], palette.accent, palette.textMuted],
+                'line-width': ['case', ['get', 'selected'], 6, 3],
+                'line-opacity': ['case', ['get', 'selected'], 0.95, 0.45],
+              }}
+            />
+          </GeoJSONSource>
+        ) : null}
+
+        {/*
           `paint`/`layout` with style-spec (kebab-case) keys, not the legacy camelCase `style`
           prop. `style` is deprecated in v11 and silently renders nothing — it warns to the JS
           console and is removed in v12.
@@ -220,12 +266,33 @@ export default function MapScreen() {
       </Map>
 
       <View style={[styles.top, { paddingTop: insets.top + 8 }]} pointerEvents="box-none">
+        {/* SOW M2-AC3: destination search at the top. */}
+        <DestinationSearch
+          near={fix}
+          selected={destination}
+          onClear={clearRoute}
+          onSelect={(place) => {
+            if (!fix) return;
+            setShowRoutes(true);
+            void planTo(place, fix);
+          }}
+        />
+
         <View style={styles.summary}>
+          {/*
+            SOW M2-AC4: with a route active, the summary is about the ROUTE, not the viewport —
+            "1 blocked crossing on your route" is what a driver about to set off needs, and a
+            count of whatever happens to be on screen is not.
+          */}
           <Text style={styles.summaryText}>
             {loading
               ? 'Loading crossings…'
-              : `${rows.length} crossing${rows.length === 1 ? '' : 's'} here` +
-                (blocked > 0 ? ` · ${blocked} blocked` : '')}
+              : activeRoute
+                ? `${activeRoute.blockedCrossings} blocked crossing${
+                    activeRoute.blockedCrossings === 1 ? '' : 's'
+                  } on your route · ${activeRoute.totalCrossings} total`
+                : `${rows.length} crossing${rows.length === 1 ? '' : 's'} here` +
+                  (blocked > 0 ? ` · ${blocked} blocked` : '')}
           </Text>
           {loading ? <ActivityIndicator size="small" color={palette.textMuted} /> : null}
         </View>
@@ -242,6 +309,17 @@ export default function MapScreen() {
             onReported={onReported}
           />
         </View>
+      ) : showRoutes ? (
+        <View style={styles.sheetWrap}>
+          <RouteOptions
+            options={routeOptions}
+            selectedId={routeSelectedId}
+            loading={routeLoading}
+            error={routeError}
+            onSelect={selectRoute}
+            onClose={() => setShowRoutes(false)}
+          />
+        </View>
       ) : selected ? (
         <View style={styles.sheetWrap}>
           <CrossingDetail
@@ -256,6 +334,14 @@ export default function MapScreen() {
           pointerEvents="box-none"
         >
           <Text style={styles.attribution}>© OpenFreeMap · OpenMapTiles · OpenStreetMap</Text>
+
+          {activeRoute ? (
+            <Button
+              label="Route options"
+              variant="secondary"
+              onPress={() => setShowRoutes(true)}
+            />
+          ) : null}
 
           {/*
             SOW M3-AC1: two taps, under five seconds. This is tap one — deliberately the largest
