@@ -43,15 +43,27 @@ number in the test name (see AGENTS.md §6, Definition of Done)._
 
 | Criterion | Assertion | Status |
 |---|---|---|
-| 1 | `config.test.ts` → "SOW §7: the route corridor default is 200 feet, stored as ~60.96 metres" + the guard that the corridor and report radius cannot be swapped | ✅ |
-| 2 | _not yet written_ — **must include a crossing 5 km ahead** (ADR 0003). Phase 6a | ☐ |
-| 3 | _not yet written_ — `conflicts_ahead()` ordering, Phase 6a | ☐ |
-| 4 | ◐ `crossing-status.test.ts` → "M4-AC4: only a FRESH blocked crossing counts as an active conflict" and "a crossing aged to yellow stops being an active red conflict"; the SQL filter is Phase 6a | ◐ |
-| 5 | _not yet written_ — realtime re-check during an active trip, Phase 6b | ☐ |
+| 1 | ✅ `supabase/tests/080-conflicts-ahead.sql` → "M4-AC1 edge case: a crossing 300 m off the line does not trigger an alert", "the corridor is configurable — at 500 m the off-route crossing comes onto the route", and "with no explicit corridor the width comes from app_config" | ✅ |
+| 2 | ✅ `080-conflicts-ahead.sql` → "M4-AC2: a fresh blocked crossing ~14 km ahead is flagged — warning is not proximity-gated", plus a companion assertion proving the fixture really is >10 km away. `route-simulator.test.ts` → "alerts for a blocked crossing far ahead, long before the driver reaches it" | ✅ |
+| 3 | ✅ `080-conflicts-ahead.sql` → behind-driver exclusion, nearest-first ordering, and monotonic `meters_ahead`. `route-simulator.test.ts` → "stops alerting once the driver has passed the crossing" | ✅ |
+| 4 | ✅ `080-conflicts-ahead.sql` → "a blocked report aged past the freshness window is no longer a conflict" and "the freshness window is configurable". `route-simulator.test.ts` → "clears the alert when the crossing is reported clear" | ✅ |
+| 5 | ✅ `080-conflicts-ahead.sql` → "a report submitted DURING the trip immediately changes the conflict set". `route-simulator.test.ts` → "notices a report submitted mid-trip, not only what was known at departure" | ✅ |
 
 Legend: ✅ covered · ◐ partially covered (see note) · ☐ not yet written
 
-**Note on criterion 1.** Risk-register item #1 is misreading 200 ft as an alert distance. The
-config test pins the value and its units; ADR 0003 records why; criterion 2's test (a crossing
-5 km ahead, asserted to be flagged) is what actually proves the misreading has not happened.
-Until that test exists, criterion 2 is genuinely unproven — hence ☐, not ◐.
+**Note on why each filter is asserted separately.** conflicts_ahead applies three filters —
+corridor, ahead-of-driver, fresh-blocked — and a suite that only checks "the right crossing came
+back" passes just as happily when two of them are broken in compensating ways. Each therefore has
+its own assertion with the other two held constant.
+
+**Note on the route simulator.** `src/stores/route-simulator.ts` replays a trip through the real
+conflict store: the driver advances, reports arrive at scripted steps, and the alert is observed
+over time. It exists because these are behaviours rather than answers — "fires once, not on a
+loop", "notices a mid-trip report", "clears on a clear report" — and a single-shot query test
+cannot see any of them. The roadmap's Phase 6 QA gate calls it worth more than every other test in
+the project; the alternative is driving around Ohio while a colleague files reports by phone.
+
+**Note on what is NOT verified.** The alert has not been seen on a device with a real trip in
+progress, because that needs either a drive or a GPX replay wired into the app's location layer.
+The store's behaviour is covered by the simulator and the SQL by pgTAP; what remains unproven is
+the rendering, and the reroute against live ORS.

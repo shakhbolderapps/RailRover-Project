@@ -20,7 +20,9 @@ import { LocationNotice } from '@/components/LocationNotice';
 import { palette, statusColors } from '@/theme/colors';
 import { useSession } from '@/stores/session';
 import { useLocation } from '@/stores/location';
+import { ActiveAlerts } from '@/components/ActiveAlerts';
 import { ConflictAlert } from '@/components/ConflictAlert';
+import { buildActiveAlerts } from '@/lib/active-alerts';
 import { DestinationSearch } from '@/components/DestinationSearch';
 import { selectActiveConflict, useConflicts } from '@/stores/conflicts';
 import { computeReroute } from '@/lib/reroute';
@@ -74,6 +76,7 @@ export default function MapScreen() {
   const dismissConflict = useConflicts((s) => s.dismiss);
   const stopConflictWatch = useConflicts((s) => s.stop);
 
+  const [showAlerts, setShowAlerts] = useState(false);
   const [rerouting, setRerouting] = useState(false);
   const [rerouteMessage, setRerouteMessage] = useState<string | null>(null);
 
@@ -205,6 +208,7 @@ export default function MapScreen() {
   }, []);
 
   const blocked = rows.filter((row) => row.color === 'red').length;
+  const activeAlerts = buildActiveAlerts(conflicts, rows);
   const collection = toFeatureCollection(rows);
   // Resolved from the current rows rather than stored, so the sheet follows a status change the
   // next time the viewport reloads instead of showing a snapshot from when it was opened.
@@ -380,6 +384,22 @@ export default function MapScreen() {
             }}
           />
         </View>
+      ) : showAlerts ? (
+        <View style={styles.sheetWrap}>
+          <ActiveAlerts
+            alerts={activeAlerts}
+            onClose={() => setShowAlerts(false)}
+            onSelect={(crossingId) => {
+              // SOW M4 Active-Alerts AC3: tapping opens the crossing's detail. Only crossings the
+              // map has loaded have a detail row to show; an on-route conflict far outside the
+              // viewport has none, so the list stays open rather than opening an empty sheet.
+              if (rows.some((row) => row.id === crossingId)) {
+                setShowAlerts(false);
+                setSelectedId(crossingId);
+              }
+            }}
+          />
+        </View>
       ) : reporting ? (
         <View style={styles.sheetWrap}>
           <ReportSheet
@@ -414,6 +434,14 @@ export default function MapScreen() {
           pointerEvents="box-none"
         >
           <Text style={styles.attribution}>© OpenFreeMap · OpenMapTiles · OpenStreetMap</Text>
+
+          {activeAlerts.length > 0 ? (
+            <Button
+              label={`Active alerts (${activeAlerts.length})`}
+              variant="secondary"
+              onPress={() => setShowAlerts(true)}
+            />
+          ) : null}
 
           {activeRoute ? (
             <Button

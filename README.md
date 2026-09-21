@@ -106,8 +106,8 @@ arriving in week six delays submission.
 | 3 — Mobile shell: auth, location, map | ✅ complete · guest/account auth, location layer, live map with clustered markers, crossing detail |
 | 4 — Report flows | ✅ complete · two-tap blocked/clear, server-validated; ⧗ five-second stopwatch pass outstanding |
 | 5 — Destination & route options | ✅ complete · live routing with per-route crossing counts |
-| 6 — Conflict detection, alerts, reroute | next |
-| 7 — Notifications | |
+| 6 — Conflict detection, alerts, reroute | ✅ code complete · route simulator covers the behaviours; ⧗ not yet seen on device mid-trip |
+| 7 — Notifications | next |
 | 8–9 — Admin panel & analytics | |
 | 10 — Hardening & release prep | |
 

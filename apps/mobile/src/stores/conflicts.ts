@@ -33,11 +33,54 @@ interface ConflictState {
   stop: () => void;
 }
 
+/**
+ * Where conflicts come from, and what tells us to re-ask.
+ *
+ * Injected for the same reason `LocationService` is: the route simulator replays a whole trip
+ * through this store — moving the driver, injecting reports, checking that the alert fires once
+ * and clears correctly — and it cannot do that against a live Postgres changefeed. Depending on
+ * the interface rather than on Supabase directly is what makes the simulator possible at all.
+ */
+export interface ConflictSource {
+  fetch: (route: Position[], driver: LatLng) => Promise<RouteConflictRow[]>;
+  /** Calls back whenever a report changes anywhere. Returns an unsubscribe function. */
+  subscribeToReports: (onChange: () => void) => () => void;
+}
+
+const supabaseConflictSource: ConflictSource = {
+  fetch: fetchConflictsAhead,
+  subscribeToReports: (onChange) => {
+    /**
+     * Subscribed to `reports` rather than to a view, because Postgres changefeeds emit table rows.
+     * The payload is ignored entirely — it only says "something changed", and the authoritative
+     * answer comes from re-running conflicts_ahead. Trusting the payload would mean
+     * reimplementing the corridor and freshness rules on the client.
+     *
+     * Free tier: 200 concurrent connections, 2M messages/month. One channel per active trip.
+     */
+    const channel = getSupabase()
+      .channel('route-conflicts')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'reports' }, onChange)
+      .subscribe();
+
+    return () => {
+      void channel.unsubscribe();
+    };
+  },
+};
+
+let source: ConflictSource = supabaseConflictSource;
+
+/** Test seam, used by the route simulator. */
+export const __setConflictSource = (next: ConflictSource): void => {
+  source = next;
+};
+
 interface Watch {
   route: Position[];
   driver: LatLng;
   lastCheckedAt: LatLng;
-  channel: { unsubscribe: () => void } | null;
+  unsubscribe: (() => void) | null;
   timer: ReturnType<typeof setInterval> | null;
 }
 
@@ -48,7 +91,7 @@ export const useConflicts = create<ConflictState>((set, get) => {
     if (!watch) return;
     set({ checking: true });
     try {
-      const conflicts = await fetchConflictsAhead(watch.route, watch.driver);
+      const conflicts = await source.fetch(watch.route, watch.driver);
       set({ conflicts });
     } catch {
       // A failed check must not clear a standing alert: the last known conflict set is better
@@ -66,25 +109,11 @@ export const useConflicts = create<ConflictState>((set, get) => {
     start: (route, driver) => {
       get().stop();
 
-      watch = { route, driver, lastCheckedAt: driver, channel: null, timer: null };
+      watch = { route, driver, lastCheckedAt: driver, unsubscribe: null, timer: null };
       set({ conflicts: [], dismissed: [] });
       void run();
 
-      /**
-       * Subscribed to `reports` rather than to a view, because Postgres changefeeds emit table
-       * rows. The payload is ignored entirely — it only says "something changed", and the
-       * authoritative answer comes from re-running conflicts_ahead. Trusting the payload would
-       * mean reimplementing the corridor and freshness rules on the client.
-       *
-       * Free tier: 200 concurrent connections and 2M messages/month. One channel per active trip.
-       */
-      watch.channel = getSupabase()
-        .channel('route-conflicts')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'reports' }, () => {
-          void run();
-        })
-        .subscribe();
-
+      watch.unsubscribe = source.subscribeToReports(() => void run());
       watch.timer = setInterval(() => void run(), PERIODIC_RECHECK_MS);
     },
 
@@ -103,7 +132,7 @@ export const useConflicts = create<ConflictState>((set, get) => {
       set((state) => ({ dismissed: [...state.dismissed, crossingId] })),
 
     stop: () => {
-      watch?.channel?.unsubscribe();
+      watch?.unsubscribe?.();
       if (watch?.timer) clearInterval(watch.timer);
       watch = null;
       set({ conflicts: [], dismissed: [], checking: false });

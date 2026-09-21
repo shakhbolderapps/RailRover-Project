@@ -37,6 +37,15 @@ number in the test name (see AGENTS.md §6, Definition of Done)._
 
 | Criterion | Assertion | Status |
 |---|---|---|
-| 1 | _not yet written_ | ☐ |
-| 2 | _not yet written_ | ☐ |
-| 3 | _not yet written_ | ☐ |
+| 1 | ✅ `apps/mobile/src/lib/active-alerts.test.ts` → "M4-ActiveAlerts-AC1: only RED crossings appear among the nearby ones" and the empty-state case | ✅ |
+| 2 | ✅ `active-alerts.test.ts` → "on-route crossings come before merely nearby ones" and "on-route conflicts are ordered nearest-first" | ✅ |
+| 3 | ◐ `components/ActiveAlerts.tsx` opens the crossing's detail on tap. Built, not yet exercised on a device | ◐ |
+
+Legend: ✅ covered · ◐ partially covered (see note) · ☐ not yet written
+
+**Note on the ordering.** AC2 is not cosmetic. A crossing on the driver's route will affect their
+journey; one two streets away will not, and interleaving them buries the ones that matter.
+
+**Note on a crossing the map has not loaded.** An on-route conflict can sit far outside the current
+viewport, so no detail row exists for it. Tapping such an entry leaves the list open rather than
+opening an empty sheet — fetching the crossing on demand is the better fix and is not done yet.
