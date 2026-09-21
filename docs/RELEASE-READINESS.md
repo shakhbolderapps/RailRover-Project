@@ -93,10 +93,11 @@ Asserted by pgTAP, not by inspection — 140 assertions across 10 files:
 - **ORS quota.** The live header reads `x-ratelimit-limit: 200`/day, not the 2,000 ADR 0001
   assumed. `describeRoutingError` distinguishes the daily cap from the per-minute one and tells the
   driver that reporting still works — losing routing must not read as the whole app being broken.
-- **Supabase 7-day auto-pause.** The keep-alive workflow exists but **its GitHub secrets could not
-  be verified** — the CLI token lacks permission to list them. If `SUPABASE_URL` and
-  `SUPABASE_ANON_KEY` are unset the workflow skips with a warning, so the pause risk is live until
-  someone confirms them in repo settings.
+- **Supabase 7-day auto-pause — mitigated, and now proven.** The keep-alive workflow's secrets
+  could not be read directly (the CLI token cannot list repo secrets), but a scheduled run on
+  2026-09-21 completed successfully in 8 seconds. The workflow skips with a warning when the
+  secrets are missing, so a *green* run is only possible if `SUPABASE_URL` and `SUPABASE_ANON_KEY`
+  are set and the database answered. The risk is closed.
 
 ## 7. Distributing the test APK
 
