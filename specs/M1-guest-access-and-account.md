@@ -41,7 +41,23 @@ number in the test name (see AGENTS.md §6, Definition of Done)._
 
 | Criterion | Assertion | Status |
 |---|---|---|
-| 1 | _not yet written_ | ☐ |
-| 2 | _not yet written_ | ☐ |
-| 3 | _not yet written_ | ☐ |
-| 4 | _not yet written_ | ☐ |
+| 1 | ◐ `stores/session.test.ts` → "M1-AC1: an anonymous Supabase session counts as a guest, not as signed out"; `supabase/tests/060-submit-report.sql` runs its whole suite **as the `anon` role**, which is what proves a guest can actually submit. The two-tap report UI is Phase 4 | ◐ |
+| 2 | ◐ `lib/auth-errors.test.ts` covers the sign-in failure copy; sign-up, sign-in and session restore are implemented in `stores/session.ts`. No assertion yet drives a real round trip against GoTrue | ◐ |
+| 3 | ◐ Delegated to Supabase Auth (GoTrue), which stores a bcrypt hash — not our code to assert. See note | ◐ |
+| 4 | ✅ `lib/device.test.ts` → "M1-AC4: produces a device identifier that reports can be attributed to" + "M1-AC4: the identifier is STABLE across launches, or rate limiting means nothing"; `supabase/tests/060-submit-report.sql` → "M3-AC3: the report records the device identifier" | ✅ |
+
+Legend: ✅ covered · ◐ partially covered (see note) · ☐ not yet written
+
+**Note on criterion 3.** The app never hashes anything: the password goes straight from the form
+into `supabase.auth.signUp`/`signInWithPassword` over TLS, and GoTrue stores a bcrypt hash. There
+is no honest unit test for "the server hashes correctly" from inside this codebase — asserting it
+here would be theatre. What *is* ours to get right is that the password is never persisted or
+logged client-side, which holds by construction: it lives in component state and is never written
+to SecureStore, AsyncStorage, or the session store.
+
+**Note on the guest → account edge case.** "A guest later creates an account → System carries the
+device settings and recent reports into the new account" is satisfied by the platform rather than
+by a migration: `signUp` calls `updateUser` when the driver is already in an anonymous session, so
+credentials attach to the *same* user id and every report already written with that `user_id`
+belongs to the new account. Calling `signUp` unconditionally would mint a second user and orphan
+the guest's history — see `stores/session.ts`.

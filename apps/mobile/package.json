@@ -17,13 +17,14 @@
     "apk": "bash ../../scripts/build-apk.sh"
   },
   "dependencies": {
-    "@railrover/shared": "workspace:*",
     "@maplibre/maplibre-react-native": "^10.2.0",
+    "@railrover/shared": "workspace:*",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@supabase/supabase-js": "^2.49.4",
     "expo": "~57.0.16",
     "expo-application": "~57.0.1",
     "expo-constants": "~57.0.14",
+    "expo-crypto": "~57.0.3",
     "expo-device": "~57.0.1",
     "expo-font": "~57.0.1",
     "expo-image": "~57.0.3",
@@ -59,6 +60,9 @@
     "typescript": "~6.0.3"
   },
   "jest": {
-    "preset": "jest-expo"
+    "preset": "jest-expo",
+    "setupFilesAfterEnv": [
+      "<rootDir>/jest.setup.js"
+    ]
   }
 }

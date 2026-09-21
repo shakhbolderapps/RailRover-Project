@@ -4,6 +4,10 @@
     "strict": true,
     "jsx": "react-jsx",
     "lib": ["ES2022", "DOM"],
+    // Explicit rather than relying on automatic @types discovery, which does not resolve through
+    // pnpm's isolated node_modules here — test globals otherwise fail to typecheck while the
+    // tests themselves run fine, which is a confusing pair of signals.
+    "types": ["jest", "react"],
     "paths": {
       "@/*": ["./src/*"],
       "@railrover/shared": ["../../packages/shared/src/index.ts"],
