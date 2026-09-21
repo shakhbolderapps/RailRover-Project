@@ -137,3 +137,33 @@ export function groupInbox(items: InboxItem[], windowMs = GROUPING_WINDOW_MS): I
 
   return groups;
 }
+
+/** SOW M1-Settings AC2: auto-reroute is on by default; a driver can turn it off. */
+export async function setAutoReroute(deviceId: string, enabled: boolean): Promise<void> {
+  const { error } = await getSupabase().rpc('set_auto_reroute', {
+    p_device_id: deviceId,
+    p_enabled: enabled,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function fetchDevicePreferences(
+  deviceId: string,
+): Promise<{ push_enabled: boolean; auto_reroute: boolean } | null> {
+  const { data, error } = await getSupabase().rpc('get_device_preferences', {
+    p_device_id: deviceId,
+  });
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as { push_enabled: boolean; auto_reroute: boolean }[])[0] ?? null;
+}
+
+/**
+ * SOW M1-Settings AC3, and a hard store-submission requirement on both platforms.
+ *
+ * Reports survive with their `user_id` nulled — deleting them would rewrite crossing history for
+ * every other driver, and severing the link to a person is what makes them non-personal.
+ */
+export async function deleteAccount(): Promise<void> {
+  const { error } = await getSupabase().rpc('delete_my_account');
+  if (error) throw new Error(error.message);
+}

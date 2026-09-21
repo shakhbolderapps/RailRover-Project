@@ -7,7 +7,7 @@
 -- hiding a route — a test that only ever calls these as an admin proves nothing about that.
 
 begin;
-select plan(24);
+select plan(30);
 
 select has_table('alert_events', 'alert_events table exists');
 select has_table('reroute_events', 'reroute_events table exists');
@@ -201,6 +201,70 @@ select is(
   'M5-Inventory-AC3: a retired crossing drops out of the route logic immediately'
 );
 
+-- ---------------------------------------------------------------------------------------------
+-- Account deletion (SOW M1-Settings AC3, and a hard store-submission requirement on both
+-- platforms). The interesting assertion is what SURVIVES: deleting the reports would rewrite
+-- crossing history for every other driver, so the link to a person is severed instead.
+-- ---------------------------------------------------------------------------------------------
 reset role;
+
+insert into auth.users (id, instance_id, aud, role, email)
+values ('55555555-5555-4555-8555-555555555555', '00000000-0000-0000-0000-000000000000',
+        'authenticated', 'authenticated', 'leaving@example.test')
+on conflict (id) do nothing;
+
+insert into profiles (id, role, email)
+values ('55555555-5555-4555-8555-555555555555', 'driver', 'leaving@example.test')
+on conflict (id) do nothing;
+
+insert into devices (device_id, user_id, push_token)
+values ('leaving-device', '55555555-5555-4555-8555-555555555555', 'ExponentPushToken[x]')
+on conflict (device_id) do update set user_id = excluded.user_id;
+
+insert into reports (id, crossing_id, status, device_id, user_id, reported_at)
+values ('cccccccc-0000-4000-8000-000000000001',
+        (select id from crossings where dot_id = 'ADMIN-1'),
+        'blocked', 'leaving-device', '55555555-5555-4555-8555-555555555555', clock_timestamp());
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"55555555-5555-4555-8555-555555555555","role":"authenticated"}';
+
+select lives_ok(
+  $$select delete_my_account()$$,
+  'M1-Settings-AC3: a driver can delete their own account'
+);
+
+reset role;
+
+select is(
+  (select count(*)::int from auth.users where id = '55555555-5555-4555-8555-555555555555'),
+  0,
+  'M1-Settings-AC3: the auth user is really gone, not merely flagged'
+);
+
+select is(
+  (select count(*)::int from profiles where id = '55555555-5555-4555-8555-555555555555'),
+  0,
+  'the profile cascades away with the user'
+);
+
+select is(
+  (select count(*)::int from reports where id = 'cccccccc-0000-4000-8000-000000000001'),
+  1,
+  'the REPORT survives — deleting it would rewrite crossing history for every other driver'
+);
+
+select is(
+  (select user_id from reports where id = 'cccccccc-0000-4000-8000-000000000001'),
+  null,
+  'but its link to a person is severed, which is what made it personal'
+);
+
+select is(
+  (select push_token from devices where device_id = 'leaving-device'),
+  null,
+  'the push token is cleared, so a deleted account stops receiving notifications'
+);
+
 select * from finish();
 rollback;

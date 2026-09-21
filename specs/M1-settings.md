@@ -33,6 +33,19 @@ number in the test name (see AGENTS.md §6, Definition of Done)._
 
 | Criterion | Assertion | Status |
 |---|---|---|
-| 1 | _not yet written_ | ☐ |
-| 2 | _not yet written_ | ☐ |
-| 3 | _not yet written_ | ☐ |
+| 1 | ✅ `lib/notifications.test.ts` → permission-state mapping; the Settings toggle writes through `register_push_token` and sends the driver to system settings once the OS will no longer prompt | ✅ |
+| 2 | ✅ `devices.auto_reroute` defaults to TRUE (SOW: on by default) and `set_auto_reroute` persists the change; the Settings switch reads it back via `get_device_preferences` | ✅ |
+| 3 | ✅ `supabase/tests/100-admin-and-analytics.sql` → "a driver can delete their own account", "the auth user is really gone, not merely flagged", "the profile cascades away", "the REPORT survives", "but its link to a person is severed", "the push token is cleared" | ✅ |
+
+Legend: ✅ covered · ◐ partially covered (see note) · ☐ not yet written
+
+**Note on what deletion keeps.** Reports survive with `user_id` nulled, and that is deliberate on
+two counts. Deleting them would rewrite crossing history for every other driver — a crossing
+someone reported blocked ten minutes ago does not become clear because the reporter closed their
+account, and flipping it back to green would be a safety regression. And what made the report
+personal was the link to a person, which is severed. The device id stays because the rate limit and
+abuse review depend on it, and it identifies an install rather than a person — the same reasoning
+that lets a guest report at all.
+
+**Note on where preferences live.** On `devices`, not `profiles`: a guest has no profile, and the
+preference belongs to the phone in the mount rather than to an account.

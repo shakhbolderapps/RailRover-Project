@@ -109,6 +109,6 @@ arriving in week six delays submission.
 | 6 — Conflict detection, alerts, reroute | ✅ code complete · route simulator covers the behaviours; ⧗ not yet seen on device mid-trip |
 | 7 — Notifications | ◐ inbox complete · push delivery blocked on Firebase + Apple accounts |
 | 8–9 — Admin panel & analytics | ✅ code complete · all five M5 features; ⧗ panel not yet opened in a browser |
-| 10 — Hardening & release prep | next |
+| 10 — Hardening & release prep | ✅ audited · see [docs/RELEASE-READINESS.md](docs/RELEASE-READINESS.md) |
 
 Plan: [`docs/RailRover-Agentic-Roadmap.md`](docs/RailRover-Agentic-Roadmap.md).

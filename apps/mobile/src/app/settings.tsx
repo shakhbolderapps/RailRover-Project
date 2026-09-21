@@ -7,9 +7,12 @@ import { palette } from '@/theme/colors';
 import { useSession } from '@/stores/session';
 import { useLocation } from '@/stores/location';
 import {
+  deleteAccount,
+  fetchDevicePreferences,
   getPushPermission,
   requestPushPermission,
   registerForPush,
+  setAutoReroute,
   setPushEnabled,
   type PushPermission,
 } from '@/lib/notifications';
@@ -30,6 +33,8 @@ export default function SettingsScreen() {
 
   const [push, setPush] = useState<PushPermission>('undetermined');
   const [pushOn, setPushOn] = useState(false);
+  const [autoReroute, setAutoRerouteOn] = useState(true);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     void getPushPermission().then((permission) => {
@@ -37,6 +42,13 @@ export default function SettingsScreen() {
       setPushOn(permission === 'granted');
     });
   }, []);
+
+  useEffect(() => {
+    if (!deviceId) return;
+    void fetchDevicePreferences(deviceId).then((prefs) => {
+      if (prefs) setAutoRerouteOn(prefs.auto_reroute);
+    });
+  }, [deviceId]);
 
   const togglePush = async (next: boolean) => {
     if (!deviceId) return;
@@ -77,6 +89,28 @@ export default function SettingsScreen() {
           <Switch
             value={pushOn}
             onValueChange={(next) => void togglePush(next)}
+            trackColor={{ true: palette.accent, false: palette.border }}
+          />
+        </View>
+      </View>
+
+      {/* SOW M1-Settings AC2: on by default, with an explicit way to be prompted instead. */}
+      <View style={styles.card}>
+        <View style={styles.row}>
+          <View style={styles.rowText}>
+            <Text style={styles.label}>Reroute automatically</Text>
+            <Text style={styles.hint}>
+              {autoReroute
+                ? 'When a blocked crossing is found ahead, RailRover offers a way around it straight away.'
+                : 'You will be asked first each time a blocked crossing is found ahead.'}
+            </Text>
+          </View>
+          <Switch
+            value={autoReroute}
+            onValueChange={(next) => {
+              setAutoRerouteOn(next);
+              if (deviceId) void setAutoReroute(deviceId, next);
+            }}
             trackColor={{ true: palette.accent, false: palette.border }}
           />
         </View>
@@ -125,6 +159,32 @@ export default function SettingsScreen() {
             void signOut().then(() => router.replace('/'));
           }}
         />
+
+        {/*
+          SOW M1-Settings AC3, and a hard store-submission requirement on both platforms. Two taps
+          because it is irreversible, and the copy says exactly what survives rather than implying
+          everything disappears — the reports stay, with the link to the person severed.
+        */}
+        {confirmDelete ? (
+          <>
+            <Text style={styles.hint}>
+              This cannot be undone. Your account and settings are deleted. The crossing reports
+              you submitted stay, with nothing linking them to you — removing them would change
+              what other drivers see at those crossings.
+            </Text>
+            <Button
+              label="Permanently delete my account"
+              onPress={() => {
+                void deleteAccount()
+                  .then(() => signOut())
+                  .then(() => router.replace('/'));
+              }}
+            />
+            <Button label="Cancel" variant="ghost" onPress={() => setConfirmDelete(false)} />
+          </>
+        ) : (
+          <Button label="Delete my account" variant="ghost" onPress={() => setConfirmDelete(true)} />
+        )}
       </View>
     </View>
   );

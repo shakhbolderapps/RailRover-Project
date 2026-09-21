@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import maplibregl from 'maplibre-gl';
+// maplibre-gl v6 has no default export. `Map` is aliased because it shadows the JS global.
+import { Map as MapLibreMap, Marker } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 import {
@@ -27,8 +28,8 @@ export function CrossingEditor({ onNotice }: { onNotice: (message: string) => vo
   const [busy, setBusy] = useState(false);
 
   const container = useRef<HTMLDivElement | null>(null);
-  const map = useRef<maplibregl.Map | null>(null);
-  const marker = useRef<maplibregl.Marker | null>(null);
+  const map = useRef<MapLibreMap | null>(null);
+  const marker = useRef<Marker | null>(null);
 
   const search = async () => {
     try {
@@ -49,7 +50,7 @@ export function CrossingEditor({ onNotice }: { onNotice: (message: string) => vo
     if (!selected || !container.current) return;
 
     if (!map.current) {
-      map.current = new maplibregl.Map({
+      map.current = new MapLibreMap({
         container: container.current,
         style: STYLE_URL,
         center: [selected.longitude, selected.latitude],
@@ -60,7 +61,7 @@ export function CrossingEditor({ onNotice }: { onNotice: (message: string) => vo
     }
 
     marker.current?.remove();
-    marker.current = new maplibregl.Marker({ draggable: true, color: '#d7262f' })
+    marker.current = new Marker({ draggable: true, color: '#d7262f' })
       .setLngLat([selected.longitude, selected.latitude])
       .addTo(map.current);
 
