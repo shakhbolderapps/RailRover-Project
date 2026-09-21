@@ -44,3 +44,11 @@ Proceed without Docker, in a way that makes adopting it later a no-op:
 
 Docker or colima is installed. At that point: switch dev to `supabase start`, add
 `LocalValhallaAdapter`, move pgTAP into CI properly, and supersede this ADR.
+
+## Update, 2026-09-21
+
+Docker Desktop is now installed. `supabase test db --linked` runs the pg_prove harness in a
+container against the **hosted** project — the pgTAP suite is no longer unverified; all 69
+assertions across 6 files pass. This partially resolves the "pgTAP tests need a Postgres to run
+against" consequence above without the fuller revisit (switching dev to `supabase start`,
+adding `LocalValhallaAdapter`) — that remains open and this ADR remains otherwise Accepted.

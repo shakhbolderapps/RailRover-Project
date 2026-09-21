@@ -38,7 +38,7 @@ number in the test name (see AGENTS.md §6, Definition of Done)._
 
 | Criterion | Assertion | Status |
 |---|---|---|
-| 1 | ◐ `crossing-status.test.ts` → "a crossing with no reports is UNKNOWN, not green"; `supabase/tests/030` → report_count and last_reported_at resolution ⧗. Display is Phase 3d | ◐ |
+| 1 | ◐ `crossing-status.test.ts` → "a crossing with no reports is UNKNOWN, not green"; `supabase/tests/030` → report_count and last_reported_at resolution, executed and passing. Display is Phase 3d | ◐ |
 | 2 | _not yet written_ — needs route conflict detection (Phase 6a) | ☐ |
 | 3 | _not yet written_ — needs the report flows (Phase 4) | ☐ |
 

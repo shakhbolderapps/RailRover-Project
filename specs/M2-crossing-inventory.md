@@ -37,9 +37,9 @@ number in the test name (see AGENTS.md §6, Definition of Done)._
 
 | Criterion | Assertion | Status |
 |---|---|---|
-| 1 | `scripts/src/fra.test.ts` → "M2-AC1: maps identifier, name, location, road and city" + "dot_id is the FRA crossing ID"; `supabase/tests/020` → dot_id uniqueness ⧗ | ◐ |
+| 1 | `scripts/src/fra.test.ts` → "M2-AC1: maps identifier, name, location, road and city" + "dot_id is the FRA crossing ID"; `supabase/tests/020` → dot_id uniqueness | ✅ |
 | 2 | `fra.test.ts` → "M2-AC2: scopes the query to a radius around the pilot centre" + "the radius is parameterised". **Ships at 50 mi for development; the contracted 200 mi is a one-flag change before pilot launch** (ADR 0008) | ◐ |
-| 3 | `supabase/tests/020-crossings-schema.sql` → "M5: a coordinate correction is visible through crossing_status immediately" ⧗ | ⧗ |
+| 3 | `supabase/tests/020-crossings-schema.sql` → "M5: a coordinate correction is visible through crossing_status immediately" | ✅ |
 
 Legend: ✅ covered · ◐ partially covered (see note) · ⧗ assertion written but never executed · ☐ not yet written
 
@@ -58,5 +58,6 @@ grade-separated (an overpass can never be blocked), private, closed, and pedestr
 Asserted twice — in `fra.test.ts` for the ingest filter, and as a `CHECK (is_at_grade)` constraint
 in the schema so a bad ingest or a manual insert cannot bypass it.
 
-**⧗ means written but never run.** No database exists yet (ADR 0007), so every pgTAP assertion
-here is unverified.
+**Update, 2026-09-21.** The Supabase project now exists and the full pgTAP suite runs against it
+(`supabase test db --linked`, via Docker per ADR 0007's revisit condition) — all assertions above
+are executed and passing, not just written.

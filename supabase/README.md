@@ -42,7 +42,11 @@ works against the same files.
 | File | Phase | Contents |
 |---|---|---|
 | `20260825000100_extensions_and_app_config.sql` | 0 | PostGIS + pgcrypto, `app_config` with the SOW's tunable defaults, RLS, typed accessors |
+| `20260826000200_crossings_reports_schema.sql` | 1 | `crossings`, `reports`, `profiles`, `devices`, `is_admin()`, RLS on every table, `touch_updated_at` trigger |
+| `20260826000300_crossing_status_view.sql` | 1 | `crossing_color()`, the `crossing_status` view, `nearest_crossing()`, `crossings_in_bounds()` |
+| `20260921000100_fix_touch_updated_at_transaction_time.sql` | 1 (fix) | `touch_updated_at()` switched from `now()` to `clock_timestamp()` — found by the first real pgTAP run against the hosted project |
+| `20260921000200_submit_report.sql` | 2 | `submit_report()` — the only legal write path into `reports` (ADR 0004): device suspension, radius, rate limit |
 
-Phase 1 adds: `crossings`, `reports`, `profiles`, `devices`, the `crossing_status` view,
-`nearest_crossing()`, `submit_report()`, and the admin-write policies — each with pgTAP tests
-asserting the SOW acceptance criteria.
+Migrations are pushed to a hosted Supabase project (`supabase link` + `supabase db push`) and the
+pgTAP suite runs against it with `supabase test db --linked` (needs Docker locally to run the
+`pg_prove` harness, even though the target database is remote — see ADR 0007).

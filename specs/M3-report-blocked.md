@@ -42,17 +42,18 @@ number in the test name (see AGENTS.md §6, Definition of Done)._
 | Criterion | Assertion | Status |
 |---|---|---|
 | 1 | _not yet written_ — two-tap flow is Phase 4. **Also requires a stopwatch pass on device**: an under-five-seconds requirement cannot be proven by a unit test, and must be timed separately on iOS once a device exists | ☐ |
-| 2 | ◐ `geo.test.ts` → "0.9 mi is inside the report radius and 1.1 mi is outside"; `supabase/tests/040` → nearest_crossing radius bound and app_config default ⧗. Authoritative enforcement in `submit_report` is Phase 2 | ◐ |
-| 3 | _not yet written_ — `submit_report` writes crossing, status, timestamp and device identifier. Phase 2. Schema is in place (`reports`) | ☐ |
-| 4 | ◐ `supabase/tests/030` → "a new blocked report updates the crossing to red" ⧗; the freshness-window reset follows from most-recent-wins | ◐ |
-| 5 | _not yet written_ — server-side rate limit, Phase 2. Index (`reports_device_time_idx`) is in place | ☐ |
+| 2 | ✅ `geo.test.ts` → "0.9 mi is inside the report radius and 1.1 mi is outside"; `supabase/tests/040` → nearest_crossing radius bound and app_config default; `supabase/tests/060-submit-report.sql` → "M3-AC2: a driver 0.9 mi from a crossing CAN report it" / "...1.1 mi...CANNOT" | ✅ |
+| 3 | ✅ `supabase/tests/060-submit-report.sql` → "M3-AC3: the report records the device identifier" / "...the status" / "...a fresh timestamp" | ✅ |
+| 4 | ✅ `supabase/tests/030` → "a new blocked report updates the crossing to red"; `supabase/tests/060-submit-report.sql` → "M3-AC4: a new blocked report shows the crossing as red immediately", plus most-recent-wins asserted end-to-end through `submit_report` itself | ✅ |
+| 5 | ✅ `supabase/tests/060-submit-report.sql` → "M3-AC5: the 4th rapid report from the same device trips the rate limit" (limit lowered to 3 for a fast, deterministic test) | ✅ |
 
 Legend: ✅ covered · ◐ partially covered (see note) · ⧗ assertion written but never executed · ☐ not yet written
 
 **Note on criterion 2.** A client-side radius check is decoration (ADR 0004). The shared distance
 math and the `nearest_crossing` bound are tested here; the *enforcement* is a pgTAP assertion
-against `submit_report` in Phase 2. `supabase/tests/050-rls.sql` asserts the thing that makes
-that enforcement meaningful: a client cannot insert into `reports` directly.
+against `submit_report`, in `supabase/tests/060-submit-report.sql`. `supabase/tests/050-rls.sql`
+asserts the thing that makes that enforcement meaningful: a client cannot insert into `reports`
+directly — `submit_report` is the only door.
 
 **Note on criterion 1.** Verified with a stopwatch, phone mounted, from app-open to
 report-submitted — a five-second budget is a per-platform claim, so it is timed on Android now
