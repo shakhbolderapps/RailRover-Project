@@ -101,9 +101,9 @@ arriving in week six delays submission.
 | Phase | Status |
 |---|---|
 | 0 — Foundation & guardrails | ✅ complete |
-| 1 — Crossing data & schema | ✅ complete · migrations pushed, all 52 pgTAP assertions pass on the hosted project |
-| 2 — Reporting engine | next |
-| 3 — Mobile shell: auth, location, map | |
+| 1 — Crossing data & schema | ✅ complete · 1,696 real crossings loaded; 50-mile dev radius (ADR 0008) |
+| 2 — Reporting engine | ✅ complete · `submit_report()` enforces radius, rate limit and suspension server-side |
+| 3 — Mobile shell: auth, location, map | next |
 | 4 — Report flows | |
 | 5 — Destination & route options | |
 | 6 — Conflict detection, alerts, reroute | |
