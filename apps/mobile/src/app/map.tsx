@@ -20,7 +20,10 @@ import { LocationNotice } from '@/components/LocationNotice';
 import { palette, statusColors } from '@/theme/colors';
 import { useSession } from '@/stores/session';
 import { useLocation } from '@/stores/location';
+import { ConflictAlert } from '@/components/ConflictAlert';
 import { DestinationSearch } from '@/components/DestinationSearch';
+import { selectActiveConflict, useConflicts } from '@/stores/conflicts';
+import { computeReroute } from '@/lib/reroute';
 import { ReportSheet } from '@/components/ReportSheet';
 import { RouteOptions } from '@/components/RouteOptions';
 import { selectActiveRoute, useRoute } from '@/stores/route';
@@ -59,9 +62,20 @@ export default function MapScreen() {
   const planTo = useRoute((s) => s.planTo);
   const selectRoute = useRoute((s) => s.select);
   const clearRoute = useRoute((s) => s.clear);
+  const replaceActiveRoute = useRoute((s) => s.replaceActive);
   const activeRoute = useRoute(selectActiveRoute);
 
   const [showRoutes, setShowRoutes] = useState(false);
+
+  const conflicts = useConflicts((s) => s.conflicts);
+  const activeConflict = useConflicts(selectActiveConflict);
+  const startConflictWatch = useConflicts((s) => s.start);
+  const updateConflictPosition = useConflicts((s) => s.updatePosition);
+  const dismissConflict = useConflicts((s) => s.dismiss);
+  const stopConflictWatch = useConflicts((s) => s.stop);
+
+  const [rerouting, setRerouting] = useState(false);
+  const [rerouteMessage, setRerouteMessage] = useState<string | null>(null);
 
   const [rows, setRows] = useState<CrossingRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -83,6 +97,53 @@ export default function MapScreen() {
       if (pending.current) clearTimeout(pending.current);
     };
   }, [startLocation, stopLocation]);
+
+  /**
+   * SOW M4: the route check runs continuously while a route is active, not once at departure.
+   * Keyed to the route's identity so choosing a different option restarts the watch against the
+   * new line — and NOT keyed to `fix`, because restarting on every GPS update would tear down and
+   * rebuild the Realtime subscription several times a minute. Position is fed in separately below.
+   */
+  useEffect(() => {
+    if (!activeRoute || !fix) {
+      stopConflictWatch();
+      return;
+    }
+    startConflictWatch(activeRoute.coordinates, fix);
+    return () => stopConflictWatch();
+     
+  }, [activeRoute?.id, startConflictWatch, stopConflictWatch]);
+
+  useEffect(() => {
+    if (fix) updateConflictPosition(fix);
+  }, [fix, updateConflictPosition]);
+
+  const onReroute = useCallback(async () => {
+    if (!activeConflict || !fix || !destination) return;
+    setRerouting(true);
+    setRerouteMessage(null);
+
+    const outcome = await computeReroute(
+      fix,
+      { latitude: destination.latitude, longitude: destination.longitude },
+      activeConflict,
+    );
+    setRerouting(false);
+
+    if (outcome.kind === 'rerouted') {
+      replaceActiveRoute(outcome);
+      dismissConflict(activeConflict.crossing_id);
+      return;
+    }
+
+    // Keep the current route and say so plainly. A driver told "no better route" can still decide
+    // to wait or detour themselves, which is more use than a spinner that never resolves.
+    setRerouteMessage(
+      outcome.kind === 'no_better_route'
+        ? 'No clear way around this one — every alternate still passes a blocked crossing. Keeping your route.'
+        : outcome.message,
+    );
+  }, [activeConflict, fix, destination, replaceActiveRoute, dismissConflict]);
 
   const loadBounds = useCallback(async (bounds: Bounds) => {
     setLoading(true);
@@ -300,7 +361,26 @@ export default function MapScreen() {
         <LocationNotice permission={permission} onRequest={() => void startLocation()} />
       </View>
 
-      {reporting ? (
+      {/*
+        The alert outranks everything else on screen. A driver browsing route options while a
+        fresh blocked crossing sits ahead of them needs to be told, and burying that under a sheet
+        they happen to have open would be the one genuinely unsafe UI decision available here.
+      */}
+      {activeConflict ? (
+        <View style={styles.sheetWrap}>
+          <ConflictAlert
+            conflict={activeConflict}
+            totalAhead={conflicts.length}
+            rerouting={rerouting}
+            rerouteMessage={rerouteMessage}
+            onReroute={() => void onReroute()}
+            onKeepRoute={() => {
+              setRerouteMessage(null);
+              dismissConflict(activeConflict.crossing_id);
+            }}
+          />
+        </View>
+      ) : reporting ? (
         <View style={styles.sheetWrap}>
           <ReportSheet
             status={reporting.status}

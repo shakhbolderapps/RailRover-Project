@@ -27,7 +27,7 @@ export const __setRoutingAdapter = (next: RoutingAdapter | null): void => {
   adapter = next;
 };
 
-function getAdapter(): RoutingAdapter {
+export function getRoutingAdapter(): RoutingAdapter {
   if (adapter) return adapter;
   if (!env.orsApiKey) {
     // Typed, so the UI can explain the real cause instead of showing a generic failure. The key
@@ -78,7 +78,7 @@ export async function fetchRouteOptions(
   destination: LatLng,
   signal?: AbortSignal,
 ): Promise<RouteOption[]> {
-  const routes = await getAdapter().getRoutes(origin, destination, {
+  const routes = await getRoutingAdapter().getRoutes(origin, destination, {
     // ORS caps alternatives at 3, and three cards is already at the limit of what a driver will
     // compare before setting off.
     alternatives: 3,

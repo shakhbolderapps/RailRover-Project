@@ -20,6 +20,12 @@ interface RouteState {
 
   planTo: (destination: PlaceSuggestion, origin: LatLng) => Promise<void>;
   select: (id: string) => void;
+  /** Replace the active route with a reroute, keeping it selectable alongside the originals. */
+  replaceActive: (route: {
+    coordinates: RouteOption['coordinates'];
+    durationSeconds: number;
+    distanceMeters: number;
+  }) => void;
   clear: () => void;
 }
 
@@ -50,6 +56,33 @@ export const useRoute = create<RouteState>((set, get) => ({
   },
 
   select: (id) => set({ selectedId: id }),
+
+  /**
+   * A reroute becomes the active route, and is ADDED to the options rather than replacing them.
+   *
+   * The original route stays selectable on purpose: a driver who takes a detour and then sees the
+   * crossing reported clear should be able to go back to the route they actually wanted. Its
+   * crossing counts are left at zero because the reroute was verified conflict-free before being
+   * offered (lib/reroute.ts) — recounting here would mean a second round trip for an answer we
+   * already have.
+   */
+  replaceActive: (route) => {
+    const id = `reroute-${Date.now()}`;
+    set((state) => ({
+      options: [
+        ...state.options,
+        {
+          id,
+          coordinates: route.coordinates,
+          durationSeconds: route.durationSeconds,
+          distanceMeters: route.distanceMeters,
+          totalCrossings: 0,
+          blockedCrossings: 0,
+        },
+      ],
+      selectedId: id,
+    }));
+  },
 
   clear: () => set({ destination: null, options: [], selectedId: null, error: null }),
 }));
