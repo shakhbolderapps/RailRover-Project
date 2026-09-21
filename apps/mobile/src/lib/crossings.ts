@@ -1,4 +1,4 @@
-import type { CrossingColor } from '@railrover/shared';
+import type { CrossingColor, CrossingStatus } from '@railrover/shared';
 
 import { getSupabase } from '@/lib/supabase';
 
@@ -57,6 +57,34 @@ export async function fetchCrossingsInBounds(
 
   if (error) throw new Error(error.message);
   return (data ?? []) as CrossingRow[];
+}
+
+/**
+ * Fold a freshly reported crossing back into the loaded rows.
+ *
+ * `submit_report` returns the RECOMPUTED status, so the marker flips the moment the report lands
+ * rather than waiting for the next viewport reload. The shapes differ by design: the RPC speaks
+ * camelCase because it is a contract with the client (SubmitReportResult in packages/shared),
+ * while these rows are the `crossing_status` view as PostgREST serialises it.
+ *
+ * A crossing that is not in `rows` is left out rather than appended — it is outside the current
+ * viewport, and adding it would draw a marker where the map is not looking.
+ */
+export function applyReportedCrossing(
+  rows: CrossingRow[],
+  updated: CrossingStatus,
+): CrossingRow[] {
+  return rows.map((row) =>
+    row.id === updated.id
+      ? {
+          ...row,
+          color: updated.color,
+          last_status: updated.lastStatus,
+          last_reported_at: updated.lastReportedAt,
+          report_count: updated.reportCount,
+        }
+      : row,
+  );
 }
 
 /** GeoJSON, which is what MapLibre's ShapeSource consumes. */

@@ -1,13 +1,15 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { describeColor, formatRelativeTime } from '@railrover/shared';
+import { describeColor, formatRelativeTime, type ReportStatus } from '@railrover/shared';
 
+import { Button } from '@/components/Button';
 import { palette, statusColors } from '@/theme/colors';
 import type { CrossingRow } from '@/lib/crossings';
 
 interface Props {
   crossing: CrossingRow;
   onClose: () => void;
+  onReport: (status: ReportStatus) => void;
 }
 
 /**
@@ -17,7 +19,7 @@ interface Props {
  * (report from here) needs the report flow — Phase 6 and Phase 4 respectively. Neither is stubbed
  * with a dead control here: a button that does nothing is worse than an absent one.
  */
-export function CrossingDetail({ crossing, onClose }: Props) {
+export function CrossingDetail({ crossing, onClose, onReport }: Props) {
   const insets = useSafeAreaInsets();
   const lastReport = formatRelativeTime(crossing.last_reported_at);
 
@@ -58,6 +60,20 @@ export function CrossingDetail({ crossing, onClose }: Props) {
         <Fact
           label="Reports"
           value={`${crossing.report_count}`}
+        />
+      </View>
+
+      {/* SOW M2 Crossing-Detail AC3: report blocked or clear directly from here. */}
+      <View style={styles.actions}>
+        <Button
+          label="Blocked"
+          onPress={() => onReport('blocked')}
+          style={StyleSheet.flatten([styles.action, { backgroundColor: statusColors.red }])}
+        />
+        <Button
+          label="Clear"
+          onPress={() => onReport('clear')}
+          style={StyleSheet.flatten([styles.action, { backgroundColor: statusColors.green }])}
         />
       </View>
 
@@ -113,6 +129,8 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   factValue: { color: palette.text, fontSize: 16, fontWeight: '600' },
+  actions: { flexDirection: 'row', gap: 10 },
+  action: { flex: 1, minHeight: 58 },
   railroad: { color: palette.textMuted, fontSize: 13 },
   dotId: { color: palette.textMuted, fontSize: 11 },
 });

@@ -83,8 +83,12 @@ export const expoLocationService: LocationService = {
   watch: async (onFix) => {
     const subscription = await Location.watchPositionAsync(
       {
-        accuracy: Location.Accuracy.Balanced,
-        // A driver at 60 mph covers 27 m/s. Updating every 25 m keeps map centering and
+        // High, not Balanced. Balanced resolves through the fused/network provider, which is
+        // roughly 100 m accurate — too coarse to tell which of two nearby crossings a driver is
+        // sitting at, and that choice is the whole basis of a report. It is also why an emulator
+        // shows no movement under Balanced: `adb emu geo fix` drives the GPS provider only.
+        accuracy: Location.Accuracy.High,
+        // A driver at 60 mph covers 27 m/s. Updating every 25 m keeps map centring and
         // nearest-crossing selection current without waking the GPS on every metre travelled.
         distanceInterval: 25,
         timeInterval: 5_000,

@@ -1,4 +1,6 @@
-import { toFeatureCollection, type CrossingRow } from './crossings';
+import type { CrossingStatus } from '@railrover/shared';
+
+import { applyReportedCrossing, toFeatureCollection, type CrossingRow } from './crossings';
 
 const row = (overrides: Partial<CrossingRow> = {}): CrossingRow => ({
   id: 'c1',
@@ -57,5 +59,56 @@ describe('toFeatureCollection', () => {
 
   it('produces a valid empty collection rather than throwing on no rows', () => {
     expect(toFeatureCollection([])).toEqual({ type: 'FeatureCollection', features: [] });
+  });
+});
+
+describe('applyReportedCrossing', () => {
+  const reported = (overrides: Partial<CrossingStatus> = {}): CrossingStatus =>
+    ({
+      id: 'c1',
+      color: 'red',
+      lastStatus: 'blocked',
+      lastReportedAt: '2026-09-21T12:00:00.000Z',
+      reportCount: 1,
+      ...overrides,
+    }) as CrossingStatus;
+
+  it('M3-AC4: flips the reported crossing to its new colour without a viewport reload', () => {
+    // SOW M3 step 5: "System updates the crossing to red across the app." submit_report returns
+    // the recomputed status precisely so this does not have to wait for the next map query.
+    const [updated] = applyReportedCrossing([row({ id: 'c1', color: 'unknown' })], reported());
+    expect(updated?.color).toBe('red');
+    expect(updated?.last_status).toBe('blocked');
+    expect(updated?.report_count).toBe(1);
+  });
+
+  it('translates the RPC camelCase contract onto the snake_case view rows', () => {
+    // The two shapes differ deliberately: camelCase is the client contract
+    // (SubmitReportResult), snake_case is the crossing_status view as PostgREST serialises it.
+    const [updated] = applyReportedCrossing(
+      [row({ id: 'c1' })],
+      reported({ lastReportedAt: '2026-09-21T12:34:00.000Z' }),
+    );
+    expect(updated?.last_reported_at).toBe('2026-09-21T12:34:00.000Z');
+  });
+
+  it('leaves other crossings untouched', () => {
+    const rows = [row({ id: 'c1', color: 'unknown' }), row({ id: 'c2', color: 'green' })];
+    const [first, second] = applyReportedCrossing(rows, reported({ id: 'c2', color: 'red' }));
+    expect(first?.color).toBe('unknown');
+    expect(second?.color).toBe('red');
+  });
+
+  it('does not append a crossing the map is not currently showing', () => {
+    // Reporting from a detail sheet after panning away would otherwise draw a marker outside the
+    // viewport the rows describe.
+    const rows = [row({ id: 'c1' })];
+    expect(applyReportedCrossing(rows, reported({ id: 'somewhere-else' }))).toHaveLength(1);
+  });
+
+  it('preserves identity fields the report does not change', () => {
+    const [updated] = applyReportedCrossing([row({ id: 'c1' })], reported());
+    expect(updated?.dot_id).toBe('473988W');
+    expect(updated?.latitude).toBe(41.6528);
   });
 });

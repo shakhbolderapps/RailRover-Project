@@ -34,6 +34,23 @@ interface SessionState {
   signOut: () => Promise<void>;
 }
 
+/** Reject after `ms` so a stalled network call cannot hold a screen hostage. */
+export function withTimeout<T>(promise: PromiseLike<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('timed out')), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error instanceof Error ? error : new Error(String(error)));
+      },
+    );
+  });
+}
+
 /** A session belongs to a guest when Supabase flags the user as anonymous. */
 export const statusForSession = (session: Session | null): SessionStatus => {
   if (!session?.user) return 'signed-out';
@@ -56,13 +73,20 @@ export const useSession = create<SessionState>((set, get) => ({
     if (get().initialized) return;
     set({ initialized: true });
 
-    const deviceId = await getDeviceId();
-    const { data } = await getSupabase().auth.getSession();
-    set({
-      deviceId,
-      session: data.session,
-      status: statusForSession(data.session),
-    });
+    const deviceId = await getDeviceId().catch(() => null);
+
+    try {
+      // Bounded, because getSession() can reach the network to refresh an expired token. On a
+      // flaky connection it may neither resolve nor reject, and the root layout holds a spinner
+      // until this settles — an unbounded await here is an app that never finishes launching.
+      const { data } = await withTimeout(getSupabase().auth.getSession(), 8_000);
+      set({ deviceId, session: data.session, status: statusForSession(data.session) });
+    } catch {
+      // Fall back to a usable screen rather than spinning forever. This is self-correcting: if a
+      // stored session does exist, onAuthStateChange fires once the client catches up and moves
+      // the driver straight to the map.
+      set({ deviceId, session: null, status: 'signed-out' });
+    }
 
     // Fires on token refresh, sign-out from another surface, and on the anonymous -> account
     // upgrade, so the UI follows the real session rather than a copy that can drift from it.

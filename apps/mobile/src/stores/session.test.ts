@@ -1,6 +1,6 @@
 import type { Session } from '@supabase/supabase-js';
 
-import { statusForSession } from './session';
+import { statusForSession, withTimeout } from './session';
 
 /**
  * `statusForSession` is the one place the app decides whether a driver is a guest or an account
@@ -29,6 +29,25 @@ describe('statusForSession', () => {
   it('reports signed-out for no session at all', () => {
     expect(statusForSession(null)).toBe('signed-out');
     expect(statusForSession({} as Session)).toBe('signed-out');
+  });
+});
+
+describe('withTimeout', () => {
+  it('rejects a call that never settles, so launch cannot hang forever', async () => {
+    // The regression this guards: session restore awaited getSession() unbounded, and the root
+    // layout holds a spinner until it settles. On a stalled connection that is an app which never
+    // finishes launching — observed on the emulator as a permanent spinner with no way out.
+    await expect(withTimeout(new Promise(() => {}), 20)).rejects.toThrow('timed out');
+  });
+
+  it('passes through a value that arrives in time', async () => {
+    await expect(withTimeout(Promise.resolve('ok'), 1_000)).resolves.toBe('ok');
+  });
+
+  it('passes through a rejection rather than masking it as a timeout', async () => {
+    await expect(withTimeout(Promise.reject(new Error('offline')), 1_000)).rejects.toThrow(
+      'offline',
+    );
   });
 });
 

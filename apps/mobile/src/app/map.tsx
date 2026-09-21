@@ -12,7 +12,7 @@ import {
   type PressEventWithFeatures,
   type ViewStateChangeEvent,
 } from '@maplibre/maplibre-react-native';
-import { PILOT_CENTER } from '@railrover/shared';
+import { PILOT_CENTER, type CrossingStatus, type ReportStatus } from '@railrover/shared';
 
 import { Button } from '@/components/Button';
 import { CrossingDetail } from '@/components/CrossingDetail';
@@ -20,7 +20,9 @@ import { LocationNotice } from '@/components/LocationNotice';
 import { palette, statusColors } from '@/theme/colors';
 import { useSession } from '@/stores/session';
 import { useLocation } from '@/stores/location';
+import { ReportSheet } from '@/components/ReportSheet';
 import {
+  applyReportedCrossing,
   fetchCrossingsInBounds,
   toFeatureCollection,
   type Bounds,
@@ -50,6 +52,13 @@ export default function MapScreen() {
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const pending = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Which report the driver is making, if any. `crossing` is set only when they started from a
+  // specific crossing's detail view rather than from the map's report buttons.
+  const [reporting, setReporting] = useState<{
+    status: ReportStatus;
+    crossing?: CrossingRow;
+  } | null>(null);
 
   useEffect(() => {
     void startLocation();
@@ -106,6 +115,16 @@ export default function MapScreen() {
   const onCrossingPress = useCallback((event: NativeSyntheticEvent<PressEventWithFeatures>) => {
     const id = event.nativeEvent.features[0]?.properties?.id;
     if (typeof id === 'string') setSelectedId(id);
+  }, []);
+
+  /**
+   * SOW M3 step 5: "System updates the crossing to red across the app."
+   *
+   * `submit_report` returns the recomputed status, so the marker flips as soon as the report
+   * lands instead of waiting for the next viewport reload.
+   */
+  const onReported = useCallback((updated: CrossingStatus) => {
+    setRows((current) => applyReportedCrossing(current, updated));
   }, []);
 
   const blocked = rows.filter((row) => row.color === 'red').length;
@@ -214,9 +233,22 @@ export default function MapScreen() {
         <LocationNotice permission={permission} onRequest={() => void startLocation()} />
       </View>
 
-      {selected ? (
+      {reporting ? (
         <View style={styles.sheetWrap}>
-          <CrossingDetail crossing={selected} onClose={() => setSelectedId(null)} />
+          <ReportSheet
+            status={reporting.status}
+            {...(reporting.crossing ? { crossing: reporting.crossing } : {})}
+            onClose={() => setReporting(null)}
+            onReported={onReported}
+          />
+        </View>
+      ) : selected ? (
+        <View style={styles.sheetWrap}>
+          <CrossingDetail
+            crossing={selected}
+            onClose={() => setSelectedId(null)}
+            onReport={(reportStatus) => setReporting({ status: reportStatus, crossing: selected })}
+          />
         </View>
       ) : (
         <View
@@ -224,20 +256,39 @@ export default function MapScreen() {
           pointerEvents="box-none"
         >
           <Text style={styles.attribution}>© OpenFreeMap · OpenMapTiles · OpenStreetMap</Text>
+
+          {/*
+            SOW M3-AC1: two taps, under five seconds. This is tap one — deliberately the largest
+            target on the screen, because it is pressed one-handed at a level crossing.
+          */}
+          <View style={styles.actions}>
+            <Button
+              label="Blocked"
+              onPress={() => setReporting({ status: 'blocked' })}
+              style={StyleSheet.flatten([styles.action, { backgroundColor: statusColors.red }])}
+            />
+            <Button
+              label="Clear"
+              onPress={() => setReporting({ status: 'clear' })}
+              style={StyleSheet.flatten([styles.action, { backgroundColor: statusColors.green }])}
+            />
+          </View>
+
           {status === 'guest' ? (
             <Button
               label="Create an account"
-              variant="secondary"
+              variant="ghost"
               onPress={() => router.push('/sign-up')}
             />
-          ) : null}
-          <Button
-            label="Sign out"
-            variant="ghost"
-            onPress={() => {
-              void signOut().then(() => router.replace('/'));
-            }}
-          />
+          ) : (
+            <Button
+              label="Sign out"
+              variant="ghost"
+              onPress={() => {
+                void signOut().then(() => router.replace('/'));
+              }}
+            />
+          )}
         </View>
       )}
     </View>
@@ -264,5 +315,7 @@ const styles = StyleSheet.create({
   error: { color: statusColors.red, fontSize: 13, paddingHorizontal: 4 },
   bottom: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: 12, gap: 8 },
   sheetWrap: { position: 'absolute', left: 0, right: 0, bottom: 0 },
+  actions: { flexDirection: 'row', gap: 10 },
+  action: { flex: 1, minHeight: 64 },
   attribution: { color: palette.textMuted, fontSize: 10, textAlign: 'center' },
 });
