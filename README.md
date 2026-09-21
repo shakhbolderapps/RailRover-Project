@@ -105,7 +105,7 @@ arriving in week six delays submission.
 | 2 — Reporting engine | ✅ complete · `submit_report()` enforces radius, rate limit and suspension server-side |
 | 3 — Mobile shell: auth, location, map | ✅ complete · guest/account auth, location layer, live map with clustered markers, crossing detail |
 | 4 — Report flows | ✅ complete · two-tap blocked/clear, server-validated; ⧗ five-second stopwatch pass outstanding |
-| 5 — Destination & route options | next |
+| 5 — Destination & route options | ◐ built · destination search live; route options need a free OpenRouteService key |
 | 6 — Conflict detection, alerts, reroute | |
 | 7 — Notifications | |
 | 8–9 — Admin panel & analytics | |
