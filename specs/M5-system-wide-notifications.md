@@ -33,6 +33,11 @@ number in the test name (see AGENTS.md §6, Definition of Done)._
 
 | Criterion | Assertion | Status |
 |---|---|---|
-| 1 | _not yet written_ | ☐ |
-| 2 | _not yet written_ | ☐ |
-| 3 | _not yet written_ | ☐ |
+| 1 | ✅ `admin_broadcast()` writes one notification row and fans it out to every user; `100-admin-and-analytics.sql` asserts a DRIVER cannot call it | ✅ |
+| 2 | ✅ `090-notifications.sql` → recipients see only their own notifications, asserted from both sides with two drivers | ✅ |
+| 3 | ◐ Delivery to the in-app inbox works. PUSH delivery is blocked on the same Firebase and Apple credentials as M1 Notifications — see that spec | ◐ |
+Legend: ✅ covered · ◐ partially covered (see note) · ☐ not yet written
+
+**Note on the audience.** A broadcast is one row in `notifications` and one row per driver in
+`notification_recipients`, so a message to a thousand drivers is not a thousand copies of the text.
+`created_by` and `created_at` give the audit trail the SOW asks for.

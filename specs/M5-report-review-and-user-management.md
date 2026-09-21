@@ -37,6 +37,12 @@ number in the test name (see AGENTS.md §6, Definition of Done)._
 
 | Criterion | Assertion | Status |
 |---|---|---|
-| 1 | _not yet written_ | ☐ |
-| 2 | _not yet written_ | ☐ |
-| 3 | _not yet written_ | ☐ |
+| 1 | ✅ `100-admin-and-analytics.sql` → "an ADMIN can remove a report"; the panel lists recent reports newest-first, including already-removed rows for audit | ✅ |
+| 2 | ✅ `100-admin-and-analytics.sql` → "removing the only report reverts the crossing — no cache to invalidate". See note | ✅ |
+| 3 | ✅ `100-admin-and-analytics.sql` → "an ADMIN can suspend a device" and "the device is suspended afterwards, so submit_report will refuse it", which closes the loop with `060-submit-report.sql`'s `device_suspended` rejection | ✅ |
+Legend: ✅ covered · ◐ partially covered (see note) · ☐ not yet written
+
+**Note on why removal needs no invalidation.** The crossing's colour was never stored — it is a
+view over live reports (ADR 0002) — so a removed report changes the answer on the next read with
+nothing to expire. This is the payoff for a decision made in Phase 1 that looked like extra work
+at the time.

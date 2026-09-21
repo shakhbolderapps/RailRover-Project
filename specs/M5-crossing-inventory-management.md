@@ -37,6 +37,11 @@ number in the test name (see AGENTS.md §6, Definition of Done)._
 
 | Criterion | Assertion | Status |
 |---|---|---|
-| 1 | _not yet written_ | ☐ |
-| 2 | _not yet written_ | ☐ |
-| 3 | _not yet written_ | ☐ |
+| 1 | ☐ Not built. Add/edit/remove and coordinate correction need the MapLibre GL editor; the panel currently covers report review, user management, broadcasts and analytics | ☐ |
+| 2 | ☐ Not built — see above | ☐ |
+| 3 | ◐ The mechanism is proven: `020-crossings-schema.sql` → "M5: a coordinate correction is visible through crossing_status immediately", because every reader queries the same table. The admin UI to perform the edit does not exist yet | ◐ |
+Legend: ✅ covered · ◐ partially covered (see note) · ☐ not yet written
+
+**Note on what is missing.** This is the one M5 feature not built in Phase 8. It needs a MapLibre
+GL JS editor with a draggable marker, and the admin-write RLS policy it depends on already exists
+(`crossings_admin_write`). Recorded as not done rather than folded into a partial claim.

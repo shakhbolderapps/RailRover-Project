@@ -24,6 +24,8 @@ import { ConflictAlert } from '@/components/ConflictAlert';
 import { buildActiveAlerts } from '@/lib/active-alerts';
 import { DestinationSearch } from '@/components/DestinationSearch';
 import { selectActiveConflict, useConflicts } from '@/stores/conflicts';
+import { logAlertShown, logReroute } from '@/lib/conflicts';
+import { useSession } from '@/stores/session';
 import { computeReroute } from '@/lib/reroute';
 import { ReportSheet } from '@/components/ReportSheet';
 import { RouteOptions } from '@/components/RouteOptions';
@@ -47,6 +49,7 @@ const INITIAL_ZOOM = 13;
 
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
+  const deviceId = useSession((s) => s.deviceId);
 
   const permission = useLocation((s) => s.permission);
   const fix = useLocation((s) => s.fix);
@@ -121,6 +124,21 @@ export default function MapScreen() {
     if (fix) updateConflictPosition(fix);
   }, [fix, updateConflictPosition]);
 
+  /**
+   * Log each alert ONCE, the first time it is shown (SOW M5 analytics).
+   *
+   * Keyed on the crossing id rather than on render, because the conflict list is refreshed every
+   * time the driver moves 100 m — logging on render would turn one warning into dozens of events
+   * and make "alerts shown" meaningless.
+   */
+  const loggedAlerts = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!activeConflict || !deviceId) return;
+    if (loggedAlerts.current.has(activeConflict.crossing_id)) return;
+    loggedAlerts.current.add(activeConflict.crossing_id);
+    void logAlertShown(activeConflict.crossing_id, deviceId, activeConflict.meters_ahead);
+  }, [activeConflict, deviceId]);
+
   const onReroute = useCallback(async () => {
     if (!activeConflict || !fix || !destination) return;
     setRerouting(true);
@@ -132,6 +150,8 @@ export default function MapScreen() {
       activeConflict,
     );
     setRerouting(false);
+
+    if (deviceId) void logReroute(activeConflict.crossing_id, deviceId, outcome.kind === 'rerouted' ? 'rerouted' : 'no_better_route');
 
     if (outcome.kind === 'rerouted') {
       replaceActiveRoute(outcome);
@@ -146,7 +166,7 @@ export default function MapScreen() {
         ? 'No clear way around this one — every alternate still passes a blocked crossing. Keeping your route.'
         : outcome.message,
     );
-  }, [activeConflict, fix, destination, replaceActiveRoute, dismissConflict]);
+  }, [activeConflict, fix, destination, replaceActiveRoute, dismissConflict, deviceId]);
 
   const loadBounds = useCallback(async (bounds: Bounds) => {
     setLoading(true);
@@ -380,6 +400,7 @@ export default function MapScreen() {
             onReroute={() => void onReroute()}
             onKeepRoute={() => {
               setRerouteMessage(null);
+              if (deviceId) void logReroute(activeConflict.crossing_id, deviceId, 'declined');
               dismissConflict(activeConflict.crossing_id);
             }}
           />

@@ -37,6 +37,16 @@ number in the test name (see AGENTS.md §6, Definition of Done)._
 
 | Criterion | Assertion | Status |
 |---|---|---|
-| 1 | _not yet written_ | ☐ |
-| 2 | _not yet written_ | ☐ |
-| 3 | _not yet written_ | ☐ |
+| 1 | ✅ `supabase/tests/100-admin-and-analytics.sql` → a DRIVER is refused by `admin_remove_report`, `admin_set_device_suspended` and `admin_broadcast`, and gets no rows from either analytics function | ✅ |
+| 2 | ✅ Enforced by `profiles.role = 'admin'` inside every SECURITY DEFINER RPC, not by hiding a route. See note | ✅ |
+| 3 | ◐ Sign-in uses Supabase Auth, which rate-limits authentication attempts upstream. No lockout of our own; the copy is the same deliberately ambiguous "Email or password is incorrect." as the mobile app | ◐ |
+Legend: ✅ covered · ◐ partially covered (see note) · ☐ not yet written
+
+**Note on why the negative tests are the real ones.** Every admin function is SECURITY DEFINER,
+which means it runs as its owner and RLS does not protect it. The `is_admin()` check has to be
+INSIDE each function — without it, granting execute to `authenticated` would hand every driver the
+ability to suspend other drivers. A suite that only ever calls these as an admin proves nothing
+about that, so each is asserted from a driver session too.
+
+**Note on the sign-in screen.** It is a convenience, not a control. A non-admin who bypassed it
+entirely would still be unable to remove a report, suspend a device, broadcast, or read metrics.

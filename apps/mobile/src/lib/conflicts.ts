@@ -62,3 +62,49 @@ export const MOVEMENT_RECHECK_METERS = 100;
  * true.
  */
 export const PERIODIC_RECHECK_MS = 60_000;
+
+/**
+ * Record that a driver was shown an alert (SOW M5 analytics).
+ *
+ * Fire-and-forget: analytics must never delay or block a safety alert, and a failed log is a
+ * missing data point rather than a missing warning.
+ */
+export async function logAlertShown(
+  crossingId: string,
+  deviceId: string,
+  metersAhead: number,
+): Promise<void> {
+  await getSupabase()
+    .rpc('log_alert_shown', {
+      p_crossing_id: crossingId,
+      p_device_id: deviceId,
+      p_meters_ahead: metersAhead,
+    })
+    .then(
+      () => undefined,
+      () => undefined,
+    );
+}
+
+/**
+ * Record the OUTCOME of a reroute, including the ones that produced no detour.
+ *
+ * "No better route" and "declined" are the interesting numbers: they say whether the feature is
+ * useful or merely present, which is exactly what a pilot is meant to find out.
+ */
+export async function logReroute(
+  crossingId: string,
+  deviceId: string,
+  outcome: 'rerouted' | 'no_better_route' | 'declined',
+): Promise<void> {
+  await getSupabase()
+    .rpc('log_reroute', {
+      p_crossing_id: crossingId,
+      p_device_id: deviceId,
+      p_outcome: outcome,
+    })
+    .then(
+      () => undefined,
+      () => undefined,
+    );
+}
